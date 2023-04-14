@@ -1,6 +1,5 @@
 # PreTHOD: Prediction of Therapy Outcome in Depression
 
-================
 Cornelius Hennch, 14.04.2023
 
 **R-Version:** 4.1.2  
