@@ -19,7 +19,7 @@ compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.h
 -   `markdown/figures` is for figures that are ready to be included in
     .Rmd reports
 -   `output/plots` take all other graphics, e.g. large PDF files with
-    Kaplan-Meier plots on multiple pages
+     plots on multiple pages
 -   `src` home of the main R scripts
 
 
