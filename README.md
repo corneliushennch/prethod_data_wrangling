@@ -11,11 +11,9 @@ Cornelius Hennch, last updated: 27.04.2023
 
 **RStudio-Version:** 2023.3.0.386
 
-## Table of contents
-
-- [Project summary](#Project%20summary)
-- [Project plan and current status](#project-plan-and-current-status)
-- [Data and code management](#data-and-code-management)
+<!-- ## Table of contents -->
+<!-- -   [Project summary](#Project-summary) -->
+<!-- -   [Project plan and current status](#project-plan-and-current-status) -->
 
 ## Project summary
 
@@ -32,50 +30,73 @@ complementary therapies.
 
 ## Project plan and current status
 
-### Project Planning and Management
+[**Project plan and timeline**](#project-plan-and-timeline)
 
-- Timeline and goals
-- Detailed project plan
-- *Team responsibilities*
-- *Regular team meetings*
+- Timeline and goals → ✅
+- Detailed project plan → 🚧
+- Team responsibilities
+  - C. Hennch (lead author) 🧑‍🔬
+  - H. Stuke (methodological support) 👨‍💻
+  - N. Schoofs (supervisor) 👩‍⚕️
+  - *K.Priebe (data)* ❓
+- *Regular team meetings → ❓*
 
-### Preregistration and Registered Reports
+[**Preregistration and Registered
+Reports**](#preregistration-and-registered-reports)
 
-- Preregistration
-- Registered reports
+- Preregistration → 🚧
+- Registered reports → **journals** ❓
 
-### Code and Documentation
+[**Data and Code Management**](#data-and-code-management)
 
 - Clean, well-documented code → Code written according to Hadley
-  Wickhams [tidyverse style guide](https://style.tidyverse.org) ✔️
-- Version control tools (e.g., Git) → This repository on github. ✔️
-- README file → in progress 🚧
-
-### Data Management
-
-- Acquisition, storage, and sharing → PEQ, sharing after publication
-- Data management plan
+  Wickhams [tidyverse style guide](https://style.tidyverse.org) ✅
+- Version control tools (e.g., Git) → This repository on github. ✅
+- README file → 🚧
+- Acquisition, storage, and sharing → PEQ, sharing after publication ✅
+- Data and code management plan → clear repository structure 🚧
 - Ethical and legal requirements → Written informed consent available
-  :heavy_check_mark:
+  :white_check_mark:
 
-### Statistical Analysis
+[**Statistical Analysis**](#statistical-analysis)
 
 - Plan statistical analysis
-- Advanced statistical techniques
-- Missing data and outliers
+- Reporting guidelines
+- Handling of Missing data
 
-### Publication and Dissemination
+[**Publication and Dissemination**](#publication-and-dissemination)
 
-- Publishing in reputable journal
+- Literature review
+- Manuscript writing
+- Open access journal ❓
 - Sharing data and code
-- Dissemination plan
 
-## Data and code management
+## Project plan and timeline
+
+First draft for timeline:
+
+![](README_files/figure-gfm/timeline-1.png)<!-- -->
+
+## Preregistration and Registered Reports
+
+### Preregistration
+
+### Registered Reports
+
+Available journals for registered reports?
+
+## Statistical Analysis
+
+→ Analysis plan included in preregistration?
+
+Describe methods and packages here.
+
+## Data and Code Management
 
 ### Project folder structure
 
-**Comment:** This folder structure is slowly evolving towards a
-structure that can be used as a template for a [research
+**Comment:** This repository aspires to meet the principles of a
+[research
 compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.html?highlight=compendium "Research Compendia (The Turing way)").
 
 - `markdown/figures` is for figures that are ready to be included in
@@ -83,3 +104,21 @@ compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.h
 - `output/plots` take all other graphics, e.g. large PDF files with
   plots on multiple pages
 - `src` home of the main R scripts
+
+### Data sharing
+
+→ Which repository?
+
+## Publication and Dissemination
+
+### Transparency statement on usage of AI tools
+
+We would like to transparently report the use of
+[ChatGPT](https://chat.openai.com), a large language model trained by
+OpenAI, based on the GPT-3.5 architecture, for guiding the planning of
+our research project, as well as for providing code completion
+suggestions during data analysis in R. Additionally, we utilized
+[perplexity.ai](perplexity.ai), an AI-powered tool, for literature
+research and brainstorming. These tools were used in combination with
+our own expertise and knowledge to enhance the quality and efficiency of
+our work.

@@ -23,4 +23,3 @@ var_key <- labelled::var_label(raw_data) %>%
   pivot_longer(everything(), names_to = "var_name", values_to = "label")
 
 openxlsx::write.xlsx(var_key, "output/tables/variable_key.xlsx")
-                     

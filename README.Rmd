@@ -6,7 +6,7 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 ```
 
 # PreTHOD: Prediction of Therapy Outcome in Depression
@@ -17,60 +17,130 @@ Cornelius Hennch, last updated: `r format(Sys.time(), '%d.%m.%Y')`
 
 **RStudio-Version:** `r rstudioapi::versionInfo()$version`
 
-## Table of contents
+<!-- ## Table of contents -->
 
--   [Project summary](#Project%20summary)
--   [Project plan and current status](#project-plan-and-current-status)
--   [Data and code management](#data-and-code-management)
+<!-- -   [Project summary](#Project-summary) -->
+<!-- -   [Project plan and current status](#project-plan-and-current-status) -->
 
-## Project summary
+## Project summary {#project-summary}
 
 PreTHOD is a data analysis project at the [St. Hedwig university hospital of the Charité - Universitätsmedizin Berlin](https://psychiatrie-psychotherapie.charite.de/fuer_patienten/charite_im_shk/ "Link to hospital web-site") that tries to identify prognostic factors for the treatment outcome of depression by analyzing a dataset from routine clinical practice. The data were collected with tablet-based standardized self-rating tools both in the day clinic as well as the specialized ward for depression. Both settings work with the same cognitive-behavioral therapy program that consists of group and single therapeutic sessions as well as complementary therapies.
 
 ## Project plan and current status {#project-plan-and-current-status}
 
-### Project Planning and Management
+[**Project plan and timeline**](#project-plan-and-timeline)
 
--   Timeline and goals
--   Detailed project plan
--   *Team responsibilities*
--   *Regular team meetings*
+-   Timeline and goals → ✅
+-   Detailed project plan → 🚧
+-   Team responsibilities
+    -   C. Hennch (lead author) 🧑‍🔬
+    -   H. Stuke (methodological support) 👨‍💻
+    -   N. Schoofs (supervisor) 👩‍⚕️
+    -   *K.Priebe (data)* ❓
+-   *Regular team meetings → ❓*
 
-### Preregistration and Registered Reports
+[**Preregistration and Registered Reports**](#preregistration-and-registered-reports)
 
--   Preregistration
--   Registered reports
+-   Preregistration → 🚧
+-   Registered reports → **journals** ❓
 
-### Code and Documentation
+[**Data and Code Management**](#data-and-code-management)
 
--   Clean, well-documented code → Code written according to Hadley Wickhams [tidyverse style guide](https://style.tidyverse.org) ✔️
--   Version control tools (e.g., Git) → This repository on github. ✔️
--   README file → in progress 🚧
+-   Clean, well-documented code → Code written according to Hadley Wickhams [tidyverse style guide](https://style.tidyverse.org) ✅
+-   Version control tools (e.g., Git) → This repository on github. ✅
+-   README file → 🚧
+-   Acquisition, storage, and sharing → PEQ, sharing after publication ✅
+-   Data and code management plan → clear repository structure 🚧
+-   Ethical and legal requirements → Written informed consent available :white_check_mark:
 
-### Data Management
-
--   Acquisition, storage, and sharing → PEQ, sharing after publication
--   Data management plan
--   Ethical and legal requirements → Written informed consent available :heavy_check_mark:
-
-### Statistical Analysis
+[**Statistical Analysis**](#statistical-analysis)
 
 -   Plan statistical analysis
--   Advanced statistical techniques
--   Missing data and outliers
+-   Reporting guidelines
+-   Handling of Missing data
 
-### Publication and Dissemination
 
--   Publishing in reputable journal
+[**Publication and Dissemination**](#publication-and-dissemination)
+
+-   Literature review
+-   Manuscript writing
+-   Open access journal ❓
 -   Sharing data and code
--   Dissemination plan
 
-## Data and code management {#data-and-code-management}
+## Project plan and timeline {#project-plan-and-timeline}
+
+First draft for timeline:
+
+```{r timeline, fig.width=8,fig.height=4}
+
+library(tidyverse)
+
+# Create data frame for Gantt chart
+tasks <- c("Project planning", "Pre-\nregistration","Data cleaning", "Statistical analysis", "Manuscript preparation")
+start_date <- c("2023-04-01", "2023-05-01", "2023-05-15", "2023-07-01", "2023-10-01")
+end_date <- c("2023-05-30","2023-06-15", "2023-07-15", "2023-10-31", "2024-01-01")
+offset <- seq(1/length(tasks), 1, length.out = length(tasks))
+
+df <- data.frame(tasks, start_date, end_date)
+df$start_date <- as.Date(df$start_date)
+df$end_date <- as.Date(df$end_date)
+
+# Set colors for chart
+colors <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7")
+
+
+
+# Create Gantt chart
+ggplot(df, aes(xmin = start_date, xmax = end_date,  
+               ymin = offset, ymax = offset + 1/length(tasks), 
+               fill = fct_inorder(tasks))) +
+  geom_rect(linewidth = 1, color = "black") +
+  geom_text(aes(x = start_date + (end_date - start_date)/2, y = offset + 0.5/length(tasks), 
+                label = tasks), size = 4, fontface = "bold", color = "white") +
+  scale_fill_manual(values = colors) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  theme_minimal() +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 16),
+        legend.position = "none") +
+  labs(fill = "Tasks", x = NULL, y = NULL)
+```
+
+## Preregistration and Registered Reports
+
+### Preregistration
+
+### Registered Reports
+
+Available journals for registered reports?
+
+## Statistical Analysis
+
+→ Analysis plan included in preregistration?
+
+Describe methods and packages here.
+
+## Data and Code Management {#data-and-code-management}
 
 ### Project folder structure
 
-**Comment:** This folder structure is slowly evolving towards a structure that can be used as a template for a [research compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.html?highlight=compendium "Research Compendia (The Turing way)").
+**Comment:** This repository aspires to meet the principles of a [research compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.html?highlight=compendium "Research Compendia (The Turing way)").
 
 -   `markdown/figures` is for figures that are ready to be included in .Rmd reports
 -   `output/plots` take all other graphics, e.g. large PDF files with plots on multiple pages
 -   `src` home of the main R scripts
+
+### Data sharing
+
+→ Which repository?
+
+## Publication and Dissemination
+
+### Transparency statement on usage of AI tools
+
+We would like to transparently report the use of [ChatGPT](https://chat.openai.com), a large language model trained by OpenAI, based on the GPT-3.5 architecture, for guiding the planning of our research project, as well as for providing code completion suggestions during data analysis in R. Additionally, we utilized [perplexity.ai](perplexity.ai), an AI-powered tool, for literature research and brainstorming. These tools were used in combination with our own expertise and knowledge to enhance the quality and efficiency of our work.
