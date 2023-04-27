@@ -59,7 +59,6 @@ PreTHOD is a data analysis project at the [St. Hedwig university hospital of the
 -   Reporting guidelines
 -   Handling of Missing data
 
-
 [**Publication and Dissemination**](#publication-and-dissemination)
 
 -   Literature review
@@ -71,7 +70,7 @@ PreTHOD is a data analysis project at the [St. Hedwig university hospital of the
 
 First draft for timeline:
 
-```{r timeline, fig.width=8,fig.height=4}
+```{r timeline, fig.width=8,fig.height=4,dpi=300}
 
 library(tidyverse)
 
