@@ -1,25 +1,85 @@
+README
+================
+Cornelius Hennch
+27.04.2023
+
 # PreTHOD: Prediction of Therapy Outcome in Depression
 
-Cornelius Hennch, 14.04.2023
+Cornelius Hennch, last updated: 27.04.2023
 
-**R-Version:** 4.1.2  
-**RStudio-Version:** XX
+**R-Version:** R version 4.1.2 (2021-11-01)
+
+**RStudio-Version:** 2023.3.0.386
+
+## Table of contents
+
+- [Project summary](#Project%20summary)
+- [Project plan and current status](#project-plan-and-current-status)
+- [Data and code management](#data-and-code-management)
 
 ## Project summary
 
-Add project description and summary of literature here.
+PreTHOD is a data analysis project at the [St. Hedwig university
+hospital of the Charité - Universitätsmedizin
+Berlin](https://psychiatrie-psychotherapie.charite.de/fuer_patienten/charite_im_shk/ "Link to hospital web-site")
+that tries to identify prognostic factors for the treatment outcome of
+depression by analyzing a dataset from routine clinical practice. The
+data were collected with tablet-based standardized self-rating tools
+both in the day clinic as well as the specialized ward for depression.
+Both settings work with the same cognitive-behavioral therapy program
+that consists of group and single therapeutic sessions as well as
+complementary therapies.
 
+## Project plan and current status
 
-## Project folder structure
+### Project Planning and Management
+
+- Timeline and goals
+- Detailed project plan
+- *Team responsibilities*
+- *Regular team meetings*
+
+### Preregistration and Registered Reports
+
+- Preregistration
+- Registered reports
+
+### Code and Documentation
+
+- Clean, well-documented code → Code written according to Hadley
+  Wickhams [tidyverse style guide](https://style.tidyverse.org) ✔️
+- Version control tools (e.g., Git) → This repository on github. ✔️
+- README file → in progress 🚧
+
+### Data Management
+
+- Acquisition, storage, and sharing → PEQ, sharing after publication
+- Data management plan
+- Ethical and legal requirements → Written informed consent available
+  :heavy_check_mark:
+
+### Statistical Analysis
+
+- Plan statistical analysis
+- Advanced statistical techniques
+- Missing data and outliers
+
+### Publication and Dissemination
+
+- Publishing in reputable journal
+- Sharing data and code
+- Dissemination plan
+
+## Data and code management
+
+### Project folder structure
 
 **Comment:** This folder structure is slowly evolving towards a
 structure that can be used as a template for a [research
 compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.html?highlight=compendium "Research Compendia (The Turing way)").
 
--   `markdown/figures` is for figures that are ready to be included in
-    .Rmd reports
--   `output/plots` take all other graphics, e.g. large PDF files with
-     plots on multiple pages
--   `src` home of the main R scripts
-
-
+- `markdown/figures` is for figures that are ready to be included in
+  .Rmd reports
+- `output/plots` take all other graphics, e.g. large PDF files with
+  plots on multiple pages
+- `src` home of the main R scripts
