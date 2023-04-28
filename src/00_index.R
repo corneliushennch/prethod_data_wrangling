@@ -16,10 +16,22 @@ starttime <- Sys.time()
 work_dir <- getwd()
 
 # packages and functions
-library(tidyverse)
+suppressPackageStartupMessages({
+  library(tidyverse) # for data munging
+  library(tidylog) # inline analysis feedback
+  library(janitor) # for data cleaning
+  library(here) # for finding files
+  library(glue) # for naming files
+  library(gtsummary) # for summary statistics and tables
+  # library(kableExtra) # for table formatting in Markdown
+  library(finalfit) # for tidy modeling and assessing tidy data
+  library(glmnet) # penalized regression modeling
+  library(openxlsx) # for exportin excel files
+  library(cowplot) # for arranging plots
+})
 
 # custom functions
-source("src/00_functions.R")
+source(here("src","00_functions.R"))
 
 # today's date
 today <- format(Sys.Date(), "%Y%m%d")
@@ -28,9 +40,13 @@ today <- format(Sys.Date(), "%Y%m%d")
 
 # print intermediate figures/tables/reports?
 save_output <- FALSE
-render_reports <- TRUE
+render_reports <- FALSE
 
 # 1. Import and tidy -----------------------------------------------------------
+source(here("src","01_import.R"))
+source(here("src","01_tidy_data.R"))
+
+
 
 # 2. Transform -----------------------------------------------------------------
 

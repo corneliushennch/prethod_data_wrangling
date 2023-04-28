@@ -1,11 +1,11 @@
 README
 ================
 Cornelius Hennch
-27.04.2023
+28.04.2023
 
 # PreTHOD: Prediction of Therapy Outcome in Depression
 
-Cornelius Hennch, last updated: 27.04.2023
+Cornelius Hennch, last updated: 28.04.2023
 
 **R-Version:** R version 4.1.2 (2021-11-01)
 
@@ -81,9 +81,16 @@ First draft for timeline:
 
 ### Preregistration
 
+Which preregistration template → ❓
+
+- PRP-QUANT
+
+- aspredicted.org
+
 ### Registered Reports
 
-Available journals for registered reports?
+[Available journals for registered
+reports](https://www.cos.io/initiatives/registered-reports?_ga=2.162312380.1096880835.1682592506-524907107.1682592506 "Registered reports journal list")
 
 ## Statistical Analysis
 
@@ -91,12 +98,19 @@ Available journals for registered reports?
 
 Describe methods and packages here.
 
+### Reporting guidelines
+
+- [TRIPOD](https://www.equator-network.org/reporting-guidelines/tripod-statement/)
+  → multivariable prediction models
+
+- [JARS-Quant](https://www.equator-network.org/reporting-guidelines/journal-article-reporting-standards-for-quantitative-research-in-psychology-the-apa-publications-and-communications-board-task-force-report/)
+  → reporting standards for quantitative research in psychology
+
 ## Data and Code Management
 
 ### Project folder structure
 
-**Comment:** This repository aspires to meet the principles of a
-[research
+This repository aspires to meet the principles of a [research
 compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.html?highlight=compendium "Research Compendia (The Turing way)").
 
 - `markdown/figures` is for figures that are ready to be included in
@@ -104,6 +118,22 @@ compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.h
 - `output/plots` take all other graphics, e.g. large PDF files with
   plots on multiple pages
 - `src` home of the main R scripts
+
+<!-- -->
+
+    ## .
+    ## ├── README_files
+    ## │   └── figure-gfm
+    ## ├── data
+    ## │   └── raw
+    ## ├── markdown
+    ## ├── output
+    ## │   ├── reports
+    ## │   │   ├── presentations
+    ## │   │   └── report_files
+    ## │   │       └── figure-latex
+    ## │   └── tables
+    ## └── src
 
 ### Data sharing
 
