@@ -26,6 +26,6 @@ vignettes/*.pdf
 *.knit.md
 # R Environment Variables
 .Renviron
-# Data
+# Data and Output (upload later)
 /data/*
-/output/*
+/output/* 
