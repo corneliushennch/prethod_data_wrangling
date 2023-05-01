@@ -3,10 +3,10 @@
 #
 # Author: Hennch Cornelius (cornelius.hennch@charite.de)
 #
-# Description: Template for analysis index script that integrates multiple 
+# Description: Template for analysis index script that integrates multiple
 # scripts/reports
 #
-# Input: 
+# Input:
 # Output:
 #
 # Code written according to Hadley Wickhams "tidyverse style guide"
@@ -31,7 +31,7 @@ suppressPackageStartupMessages({
 })
 
 # custom functions
-source(here("src","00_functions.R"))
+source(here("src", "00_functions.R"))
 
 # today's date
 today <- format(Sys.Date(), "%Y%m%d")
@@ -43,14 +43,18 @@ save_output <- FALSE
 render_reports <- FALSE
 
 # 1. Import and tidy -----------------------------------------------------------
-source(here("src","01_import.R"))
-source(here("src","01_tidy_data.R"))
+# import data and export variable key for overview
+source(here("src", "01_import.R"))
 
-
+# preparatory data wrangling
+source(here("src", "01_tidy_data.R"))
 
 # 2. Transform -----------------------------------------------------------------
+# summary tables with gtsummary
+source(here("src", "02_summary_tables.R"))
 
 # 3. Explore  ------------------------------------------------------------------
+source(here("src", "03_explore_missing_data.R"))
 
 # 4. Visualize -----------------------------------------------------------------
 
@@ -62,30 +66,32 @@ source(here("src","01_tidy_data.R"))
 
 if (render_reports) {
   # powerpoint presentations
-  rmarkdown::render(input = "markdown/presentation.Rmd",
-                    output_dir = "output/reports/presentations/",
-                    knit_root_dir = work_dir,
-                    intermediates_dir = work_dir)
+  rmarkdown::render(
+    input = "markdown/presentation.Rmd",
+    output_dir = "output/reports/presentations/",
+    knit_root_dir = work_dir,
+    intermediates_dir = work_dir
+  )
 
   # html report
-  rmarkdown::render(input = "markdown/report.Rmd",
-                    output_dir = "output/reports/",
-                    output_format = "html_document",
-                    knit_root_dir = work_dir,
-                    intermediates_dir = work_dir)
+  rmarkdown::render(
+    input = "markdown/report.Rmd",
+    output_dir = "output/reports/",
+    output_format = "html_document",
+    knit_root_dir = work_dir,
+    intermediates_dir = work_dir
+  )
 
   # pdf report
-  rmarkdown::render(input = "markdown/report.Rmd",
-                    output_dir = "output/reports/",
-                    output_format = "pdf_document",
-                    knit_root_dir = work_dir,
-                    intermediates_dir = work_dir)
-
+  rmarkdown::render(
+    input = "markdown/report.Rmd",
+    output_dir = "output/reports/",
+    output_format = "pdf_document",
+    knit_root_dir = work_dir,
+    intermediates_dir = work_dir
+  )
 }
 
 # runtime
 runtime <- Sys.time() - starttime
 runtime
-
-
-
