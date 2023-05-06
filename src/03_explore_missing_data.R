@@ -100,7 +100,7 @@ line_plot <- missings_by_quest %>%
   group_by(timepoint) %>%
   pivot_longer(cols = contains("_fct"), names_to = "quest", values_to = "missing") %>%
   mutate(quest = str_remove_all(quest, "_NA_percentage_fct")) %>%
-  count(setting, timepoint, quest, missing) %>%
+  count(setting, timepoint, quest, missing, .drop = FALSE) %>%
   filter(missing == "0%") %>%
   ggplot(aes(x = timepoint, y = n, color = quest, group = quest)) +
   geom_line(stat = "identity", linewidth = 1) +
