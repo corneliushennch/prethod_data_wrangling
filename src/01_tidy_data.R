@@ -48,7 +48,6 @@ data_split[["DeKIZ"]] <- data_split[["DeKIZ"]] %>%
 # compare_df <- compare_df_cols(data_split[["TK_D"]], data_split[["DeKIZ"]])
 # compare_df %>% View()
 
-
 # 3. combining  ----------------------------------------------------------------
 # binding the two parts back together for further processing
 
@@ -64,7 +63,9 @@ tidy_data <- bind_rows(data_split, .id = "setting") %>%
     cols = -c(CODE, setting),
     names_to = c(".value", "timepoint"),
     names_sep = "_"
-  )
+  ) %>%
+  # remove duplicates
+  distinct(CODE, timepoint, .keep_all = TRUE)
 
 
 # 4. variable wrangling    -----------------------------------------------------
@@ -113,7 +114,8 @@ var_key_tidy <- var_key %>%
 labelled::var_label(tidy_data) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
-# 5. export   ------------------------------------------------------------------
+# tidy_data %>% select(print_date_vars) %>% glimpse()
+# 7. export   ------------------------------------------------------------------
 
 if (save_output) {
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))

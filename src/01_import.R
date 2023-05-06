@@ -15,7 +15,8 @@
 # 1. import SPSS file ----------------------------------------------------------
 
 raw_data <- haven::read_sav(here("data", "raw", "20230423_psychoEQExport.sav")) %>%
-  haven::as_factor()
+  haven::as_factor() %>%
+  select(!contains("PRN"))
 
 # 2. examine variables -------------------s--------------------------------------
 

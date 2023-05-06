@@ -11,7 +11,7 @@
 # Code written according to Hadley Wickhams "tidyverse style guide"
 # Header end ===================================================================
 
-# 1. summary statistics with missings ------------------------------------------
+# 1. summary of BAS with missings ----------------------------------------------
 
 # vars to include
 summary_vars <- colnames(tidy_data) %>% str_subset("DDT[:digit:]")
@@ -33,4 +33,5 @@ table_one <- tidy_data %>%
 # export
 table_one %>%
   as_hux_xlsx(here("output", "tables", glue("{today}_summary_table.xlsx")))
+
 
