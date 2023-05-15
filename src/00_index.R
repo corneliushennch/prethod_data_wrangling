@@ -4,10 +4,7 @@
 # Author: Hennch Cornelius (cornelius.hennch@charite.de)
 #
 # Description: Template for analysis index script that integrates multiple
-# scripts/reports
-#
-# Input:
-# Output:
+# scripts/reports for the PreTHOD project
 #
 # Code written according to Hadley Wickhams "tidyverse style guide"
 
@@ -67,17 +64,8 @@ source(here("src", "03_explore_missing_data.R"))
 if (render_reports) {
   # powerpoint presentations
   rmarkdown::render(
-    input = "markdown/presentation.Rmd",
+    input = "markdown/01_data_overview_missings.Rmd",
     output_dir = "output/reports/presentations/",
-    knit_root_dir = work_dir,
-    intermediates_dir = work_dir
-  )
-
-  # html report
-  rmarkdown::render(
-    input = "markdown/report.Rmd",
-    output_dir = "output/reports/",
-    output_format = "html_document",
     knit_root_dir = work_dir,
     intermediates_dir = work_dir
   )

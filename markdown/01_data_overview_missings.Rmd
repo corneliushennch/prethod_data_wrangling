@@ -1,0 +1,305 @@
+---
+title: "Prediction of therapy outcome in Depression (DeKIZ/TK-D)"
+subtitle: "Cohort overview and missing data"
+author: "Cornelius Hennch"
+date: "`r format(Sys.time(), '%d.%m.%Y')`"
+output: 
+ powerpoint_presentation:
+  reference_doc: template.pptx
+  slide_level: 2
+  keep_md: false
+---
+
+```{r setup, include=FALSE}
+library(cowplot)
+library(gtsummary)
+library(kableExtra)
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE,
+                      message = FALSE,
+                      dev = "cairo_pdf",
+                      fig.width = 8, 
+                      fig.height = 4,
+                      dpi = 300)
+```
+
+## Overview
+
+1.  Project summary and timeline
+2.  Aims/hypotheses
+3.  Data overview
+4.  Data availability/missings
+5.  Open questions
+
+## Project summary
+
+-   Data analysis project at St. Hedwig University Hospital, Charité - Universitätsmedizin Berlin.
+
+-   **Goal:** identify prognostic factors (good/bad) for depression treatment outcome.
+
+-   **Data:** routine clinical practice dataset from tablet-based self-rating tools in day clinic (D-Track) and specialized ward (DeKIZ).
+
+-   **Therapy program:** cognitive-behavioral therapy with group/single sessions and complementary therapies.
+
+-   **Working title:** "**Pre**diction of **T**herapy **O**utcome in **D**epression"
+
+## Timeline
+
+```{r timeline, fig.width=8,fig.height=4,dpi=300}
+
+library(tidyverse)
+
+# Create data frame for Gantt chart
+tasks <- c("Project planning", "Pre-\nregistration","Data cleaning", "Statistical analysis", "Manuscript preparation")
+start_date <- c("2023-04-01", "2023-05-01", "2023-05-15", "2023-07-01", "2023-10-01")
+end_date <- c("2023-05-30","2023-06-15", "2023-07-15", "2023-10-31", "2024-01-01")
+offset <- seq(1/length(tasks), 1, length.out = length(tasks))
+
+df <- data.frame(tasks, start_date, end_date)
+df$start_date <- as.Date(df$start_date)
+df$end_date <- as.Date(df$end_date)
+
+# Set colors for chart
+colors <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7")
+
+
+
+# Create Gantt chart
+ggplot(df, aes(xmin = start_date, xmax = end_date,  
+               ymin = offset, ymax = offset + 1/length(tasks), 
+               fill = fct_inorder(tasks))) +
+  geom_rect(linewidth = 1, color = "black") +
+  geom_text(aes(x = start_date + (end_date - start_date)/2, y = offset + 0.5/length(tasks), 
+                label = tasks), size = 4, fontface = "bold", color = "white") +
+  scale_fill_manual(values = colors) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  theme_minimal() +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.title = element_text(hjust = 0.5, size = 16),
+        legend.position = "none") +
+  labs(fill = "Tasks", x = NULL, y = NULL)
+```
+
+## Project aims and hypotheses
+
+1.  Validation of known prognostic factors:
+
+-   Early response
+-   Chronicity
+
+2.  Identification of new prognostic factors based on clinical constructs
+3.  Development of prediction models for therapy outcome using statistical learning (elastic net regression)
+4.  *Prediction of early dropouts?*
+5.  *External validation of prediction models???*
+
+# Dataset overview
+
+## Self-rating questionnaires
+
+1.  Fragen zur Lebenszufriedenheit (FLZ)
+2.  Brief Symptom Inventory (BSI-18)
+3.  Beck Depressions Inventar (BDI-II)
+4.  Childhood Trauma Questionnaire (CTQ)
+5.  Behavioral Activation for Depression Scale–Short Form (BADS-9)
+6.  Skala Dysfunktionaler Einstellungen (DAS-18 A)
+7.  Internale-Externale-Kontrollüberzeugung-4 (IE-4)
+8.  Basisdoku Patient*in DeKIZ & D-Track (DDT)
+9.  Basisdoku Therapeut*in (BAS)
+
+## Questionnaires and timepoints
+
+```{r quest-timepoints}
+
+
+knitr::include_graphics("markdown/img/quest_overview.png")
+
+```
+
+
+## Cohort overview
+
+```{r cohort-summary-table}
+
+# vars to include
+summary_vars <- colnames(tidy_data) %>% str_subset("DDT[:digit:]")
+
+tidy_data %>%
+  filter(timepoint == "Aufnahme") %>%
+  tbl_summary(by = "setting",
+              include = c(summary_vars[1:2]),
+              missing_text = "Missing"
+  ) %>%
+  add_overall() %>%
+  add_p() %>%
+  bold_p() %>%
+  bold_labels() %>% 
+  as_flex_table()
+
+```
+
+# Data availability & Missing data 
+
+
+## Cases per timepoint (BDI-II)
+
+```{r bdi-summary}
+
+bdi_summary <- map(c("DeKIZ", "TK_D"), 
+                   ~ {tidy_data %>% 
+                       mutate(bdi_na = if_else(is.na(BD2DAT), "no", "yes")) %>% 
+                       filter(setting == .x) %>%
+                       labelled::set_variable_labels(
+                         bdi_na = "Data available (BDI-II)") %>% 
+                       tbl_summary(
+                         by = "timepoint",
+                         include = "bdi_na"
+                       ) %>% 
+                       bold_labels()
+                   }) 
+
+tbl_stack(bdi_summary, )
+
+bdi_summary <- tidy_data %>% 
+  mutate(bdi_na = if_else(is.na(BD2DAT), "no", "yes")) %>% 
+  group_by(setting, timepoint) %>% 
+  count(bdi_na) %>% 
+  filter(bdi_na == "yes") %>% 
+  pivot_wider(names_from = "timepoint", values_from = "n") %>% 
+  select(-bdi_na) %>% 
+  ungroup()
+
+bdi_summary_new <- bdi_summary %>% 
+  bind_rows(bdi_summary %>%
+              summarise(setting = "DeKIZ  & TK-D", 
+                        across(Aufnahme:Katamnese, sum, na.rm = TRUE)))
+
+bdi_summary_new %>% 
+  knitr::kable(format = "latex", booktabs = T) %>%
+  kable_styling(latex_options = c("striped", "scale_down"), 
+                full_width = F) %>% 
+  column_spec(1, bold = T) %>%
+  as_image(zoom = 2, latex_header_includes = "\\setmainfont{Arial}") %>% 
+  knitr::include_graphics(dpi = 300)
+
+```
+
+
+## Summary of complete cases (DeKIZ)
+
+```{r overall-missing-dekiz}
+
+# complete BSI-18 cases 
+missing_sum <- map(c("DeKIZ", "TK_D"), 
+                       ~ {filter(missings_by_quest, setting == .x) %>%
+                           labelled::set_variable_labels(
+                             DDT_NA_percentage_fct = "Basisdoku Patient*in DeKIZ & D-Track", 
+                             BD2_NA_percentage_fct = "BDI-II", 
+                             BAS_NA_percentage_fct = "Basisdoku Therapeut*in"
+                             
+                             
+                             
+                           ) %>% 
+  tbl_summary(
+    by = "timepoint",
+    include = all_of(na_fct_cols[c(7,4,3)])
+  ) %>% 
+                           bold_labels()
+                         }) 
+
+missing_sum[[1]] %>% 
+    as_gt() %>%             # convert to gt table
+  gtExtras::gt_theme_538() %>% 
+  gt::tab_options(., table.font.names = "Arial") %>% 
+  gt::gtsave(             # save table as image
+    filename = glue::glue("output/tables/{today}_miss_summary_dekiz.png"),
+    zoom = 1.5
+  )
+
+
+knitr::include_graphics(glue("output/tables/{today}_miss_summary_dekiz.png"), 
+                        dpi = 300)
+  
+
+```
+
+
+## Summary of complete cases (TK-D)
+
+```{r overall-missing-tk_d}
+
+missing_sum[[2]] %>% 
+    as_gt() %>%             # convert to gt table
+  gtExtras::gt_theme_538() %>% 
+  gt::tab_options(., table.font.names = "Arial") %>% 
+  gt::gtsave(             # save table as image
+    filename = glue::glue("output/tables/{today}_miss_summary_tkd.png"),
+    zoom = 1.5
+  )
+
+
+knitr::include_graphics(glue("output/tables/{today}_miss_summary_tkd.png"), 
+                        dpi = 300)
+```
+
+
+## Data per patient
+
+```{r heatmap-missings, fig.width=10, fig.height=5}
+
+heat_combi
+
+```
+
+
+## Data per questionnaire
+
+```{r lineplot-missings}
+
+line_plot
+
+```
+
+
+
+
+
+
+# End of presentation
+
+```{=html}
+<!---
+
+## Two column example
+
+::: columns
+::: column
+
+
+
+:::
+
+::: column
+
+Wow, this is a nice table.
+
+:::
+:::
+
+## Column template
+::::: {.columns}
+::: {.column}
+
+:::
+
+::: {.column}
+
+:::
+:::::
+
+--->
+```

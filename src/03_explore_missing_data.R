@@ -63,14 +63,14 @@ missing_summary_combined <- tbl_merge(
 )
 
 # 2. Missing plot --------------------------------------------------------------
-# overview missing plot from finalfit package
+## 2.1 overview missing plot from finalfit package -----------------------------
 missing_plots <- map(c("DeKIZ", "TK_D"), ~ filter(
     .data = labelled::remove_var_label(tidy_data) %>% arrange(timepoint),
     setting == .x)) %>%
   map(~missing_plot(.x)) %>%
   set_names(c("DeKIZ", "TK_D"))
 
-# with naniar::gg_miss_fct ordered by timepoint
+## 2.2 with naniar::gg_miss_fct ordered by timepoint ---------------------------
 miss_plots <- map(c("DeKIZ", "TK_D"), ~filter(tidy_data, setting == .x)) %>%
   map(~naniar::gg_miss_fct(.x, fct = timepoint)) %>%
   set_names(c("DeKIZ", "TK_D")) %>%
@@ -84,7 +84,61 @@ miss_plot_time <- plot_grid(plotlist = miss_plots, nrow = 1)
 miss_plot_time <- plot_grid(miss_plot_time, leg,
                             nrow = 2, rel_heights = c(0.95, 0.05))
 
-# TODO: only with cum. score variables for overview
+## 2.3 heatmap  ----------------------------------------------------------------
+
+# wrangle data
+heat_data <- missings_by_quest %>%
+  select(!contains("_fct")) %>%
+  pivot_longer(cols = contains("NA_percentage"),
+               values_to = "NA_percentage",
+               names_to = "quest") %>%
+  mutate(quest = str_remove_all(quest, "_NA_percentage"),
+         NA_percentage = NA_percentage * 100)
+
+# create a list of two plots
+missing_heatmap <- map(c("DeKIZ", "TK_D"), ~ {
+  # filter the data to only include the setting
+  filter(heat_data , setting == .x) %>%
+    # create a plot with the x axis as timepoint, y axis as CODE, and fill as NA_percentage
+    ggplot(aes(x = timepoint, y = CODE, fill = NA_percentage)) +
+    # create a tile plot
+    geom_tile(stat = "identity") +
+    # colour gradient
+    scale_fill_gradient(low = "darkgreen", high = "lightgrey") +
+    # create a facet grid
+    facet_grid(cols = vars(quest)) +
+    # remove the y axis ticks and text
+    theme(axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(x = NULL, fill = "percentage \nof missings")
+})
+
+# combine plots
+heat_combi <- plot_grid(
+  missing_heatmap[[1]] +
+    theme(legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.ticks.x = element_blank()
+          ) +
+    labs(y = "DeKIZ"),
+  missing_heatmap[[2]] +
+    theme(legend.position = "bottom",
+          strip.text = element_blank(),
+          strip.background = element_blank()) +
+    labs(y = "TK-D"),
+  nrow = 2,
+  rel_heights = c(0.35,0.65)
+)
+
+if (save_output) {
+
+  # one combined miss plot for both settings
+  ggsave(plot = heat_combi,
+         filename = here("output", "plots",
+                         glue("{today}_heat_missing_combi.pdf")),
+         height = 8, width = 12)
+}
 
 # 3. missing data in quest. scores ---------------------------------------------
 
@@ -95,7 +149,7 @@ miss_var_plots <- map(c("DeKIZ", "TK_D"), ~filter(tidy_data, setting == .x)) %>%
   map(~select(.x, timepoint, all_of(quest_scores))) %>%
   map(~naniar::gg_miss_var(.x, facet = timepoint))
 
-# 4. line plot across time -> make nicer
+# 4. line plot across time
 line_plot <- missings_by_quest %>%
   group_by(timepoint) %>%
   pivot_longer(cols = contains("_fct"), names_to = "quest", values_to = "missing") %>%
@@ -105,7 +159,11 @@ line_plot <- missings_by_quest %>%
   ggplot(aes(x = timepoint, y = n, color = quest, group = quest)) +
   geom_line(stat = "identity", linewidth = 1) +
   theme_bw() +
-  facet_wrap(~setting)
+  facet_wrap(~setting) +
+  labs(y = "Number of complete questionnaires",
+       x = "Timepoint",
+       color = "Quest.") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 # print
 if (save_output) {
@@ -125,12 +183,4 @@ if (save_output) {
 
 
 }
-
-# -> collapse number of categories for DDT015, DDT016, DDT017, DDT023
-
-
-
-
-
-
 

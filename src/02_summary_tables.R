@@ -31,7 +31,8 @@ table_one <- tidy_data %>%
   bold_labels()
 
 # export
-table_one %>%
-  as_hux_xlsx(here("output", "tables", glue("{today}_summary_table.xlsx")))
-
+if (save_output) {
+  table_one %>%
+    as_hux_xlsx(here("output", "tables", glue("{today}_summary_table.xlsx")))
+}
 

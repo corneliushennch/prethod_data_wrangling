@@ -114,6 +114,12 @@ var_key_tidy <- var_key %>%
 labelled::var_label(tidy_data) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
+# 6. filter completely empty cases ---------------------------------------------
+
+exclude <- tidy_data %>% filter(is.na(BD2DAT) & timepoint == "Aufnahme") %>%
+  pull(CODE)
+
+tidy_data <- tidy_data %>% filter(!(CODE %in% exclude))
 # tidy_data %>% select(print_date_vars) %>% glimpse()
 # 7. export   ------------------------------------------------------------------
 
