@@ -1,4 +1,4 @@
-# Header start ==============================================================================
+# Header start =================================================================
 # 00_index.R
 #
 # Author: Hennch Cornelius (cornelius.hennch@charite.de)
@@ -6,10 +6,12 @@
 # Description: Template for analysis index script that integrates multiple
 # scripts/reports for the PreTHOD project
 #
+# TODO replace by targets pipeline
+#
 # Code written according to Hadley Wickhams "tidyverse style guide"
 
 # Packages & dependencies ------------------------------------------------------
-starttime <- Sys.time()
+tictoc::tic()
 work_dir <- getwd()
 
 # packages and functions
@@ -23,7 +25,7 @@ suppressPackageStartupMessages({
   # library(kableExtra) # for table formatting in Markdown
   library(finalfit) # for tidy modeling and assessing tidy data
   library(glmnet) # penalized regression modeling
-  library(openxlsx) # for exportin excel files
+  library(openxlsx) # for exporting excel files
   library(cowplot) # for arranging plots
 })
 
@@ -81,5 +83,4 @@ if (render_reports) {
 }
 
 # runtime
-runtime <- Sys.time() - starttime
-runtime
+tictoc::toc()

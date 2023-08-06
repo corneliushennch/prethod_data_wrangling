@@ -108,7 +108,8 @@ var_key_tidy <- var_key %>%
            ~ str_remove_all(., "(Aufnahme|Verlaufsmessung|Abschlussmessung|Katamnese)")),
     across(everything(), ~ str_remove_all(., "(_TK_D|_DeKIZ)"))
   ) %>%
-  distinct(var_name, .keep_all = TRUE)
+  distinct(var_name, .keep_all = TRUE) %>%
+  add_row(var_name = "setting", label = "Behandlungssetting")
 
 # relabel tidy dataset
 labelled::var_label(tidy_data) <- setNames(as.list(var_key_tidy$label),

@@ -149,7 +149,7 @@ miss_var_plots <- map(c("DeKIZ", "TK_D"), ~filter(tidy_data, setting == .x)) %>%
   map(~select(.x, timepoint, all_of(quest_scores))) %>%
   map(~naniar::gg_miss_var(.x, facet = timepoint))
 
-# 4. line plot across time
+# 4. line plot across time  ----------------------------------------------------
 line_plot <- missings_by_quest %>%
   group_by(timepoint) %>%
   pivot_longer(cols = contains("_fct"), names_to = "quest", values_to = "missing") %>%
@@ -183,4 +183,115 @@ if (save_output) {
 
 
 }
+
+# 5. filter cases with missing BAS data ----------------------------------------
+
+# filtering for cases that don't have any bdi data at the end of therapy
+missing_bdi_ids <- tidy_data %>%
+  filter(is.na(BD2DAT) & timepoint == "Abschlussmessung") %>%
+  pull(CODE)
+
+# remove missing cases from tidy data
+complete_bdi <- tidy_data %>%
+  filter(!(CODE %in% missing_bdi_ids))
+
+## 5.1 create lists with variables  --------------------------------------------
+
+# filter for Basisdoku at end of therapy and split into two settings
+missing_bas_list <- complete_bdi %>%
+  filter(timepoint == "Abschlussmessung") %>%
+  select(setting, CODE, contains("BAS")) %>%
+  split(., .$setting)
+
+# how many missings
+missing_bas_list %>% map( ~ .x %>%
+                            #filter(is.na(BASDAT)) %>%
+                            nrow())
+
+# same thing but for basisdoku patient*in
+missing_ddt_list <- complete_bdi %>%
+  filter(timepoint == "Aufnahme") %>%
+  select(setting, CODE, contains("DDT")) %>%
+  split(., .$setting)
+
+# export
+
+if (save_output) {
+
+# data frame with variable explanation
+var_key_bas <- labelled::var_label(missing_bas_list[[1]]) %>%
+  as.data.frame() %>%
+  pivot_longer(everything(), names_to = "variable_name", values_to = "label")
+
+# Create a vector of sheet names
+sheet_names <- c("DeKIZ", "TK_D", "variable key")
+
+## 5.2 basisdoku therapist   ---------------------------------------------------
+
+# Create an empty workbook
+missing_wb <- createWorkbook()
+
+# Map over the sheet names vector and add worksheets to the workbook
+sheet_list <- map(sheet_names, ~addWorksheet(wb = missing_wb, sheetName = .x))
+
+# Map over the missing_bas_list and sheet_list, and write data to the
+# corresponding worksheets in the workbook
+map2(
+  c(missing_bas_list, list(var_key_bas)),
+  sheet_list,
+  ~writeData(
+    wb = missing_wb,
+    x = .x,
+    sheet = .y,
+    keepNA = TRUE,
+    na.string = "NA"
+  )
+)
+
+# Save the workbook to a specified file path
+saveWorkbook(
+  missing_wb,
+  here("output","tables","missing_basis_therap.xlsx"),
+  overwrite = TRUE
+)
+
+## 5.2 basisdoku patient   -----------------------------------------------------
+
+# data frame with variable explanation
+var_key_ddt <- labelled::var_label(missing_ddt_list[[1]]) %>%
+  as.data.frame() %>%
+  pivot_longer(everything(), names_to = "variable_name", values_to = "label")
+
+# Create an empty workbook
+missing_wb <- createWorkbook()
+
+# Map over the sheet names vector and add worksheets to the workbook
+sheet_list <- map(sheet_names, ~addWorksheet(wb = missing_wb, sheetName = .x))
+
+# Map over the missing_bas_list and sheet_list, and write data to the
+# corresponding worksheets in the workbook
+map2(
+  c(missing_ddt_list, list(var_key_ddt)),
+  sheet_list,
+  ~writeData(
+    wb = missing_wb,
+    x = .x,
+    sheet = .y,
+    keepNA = TRUE,
+    na.string = "NA"
+  )
+)
+
+# Save the workbook to a specified file path
+saveWorkbook(
+  missing_wb,
+  here("output","tables","missing_basis_pat.xlsx"),
+  overwrite = TRUE
+)
+
+}
+
+
+
+
 
