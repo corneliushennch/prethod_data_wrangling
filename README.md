@@ -1,15 +1,15 @@
 README
 ================
 Cornelius Hennch
-28.04.2023
+21.02.2024
 
 # PreTHOD: Prediction of Therapy Outcome in Depression
 
-Cornelius Hennch, last updated: 28.04.2023
+Cornelius Hennch, last updated: 21.02.2024
 
-**R-Version:** R version 4.1.2 (2021-11-01)
+**R-Version:** R version 4.3.1 (2023-06-16)
 
-**RStudio-Version:** 2023.3.0.386
+**RStudio-Version:** 2023.6.1.524
 
 <!-- ## Table of contents -->
 <!-- -   [Project summary](#Project-summary) -->
@@ -125,9 +125,13 @@ compendium](https://the-turing-way.netlify.app/reproducible-research/compendia.h
     ## ├── README_files
     ## │   └── figure-gfm
     ## ├── data
+    ## │   ├── processed
     ## │   └── raw
+    ## │       └── archive
     ## ├── markdown
+    ## │   └── img
     ## ├── output
+    ## │   ├── plots
     ## │   ├── reports
     ## │   │   ├── presentations
     ## │   │   └── report_files

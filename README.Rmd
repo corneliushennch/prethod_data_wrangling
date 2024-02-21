@@ -76,9 +76,27 @@ First draft for timeline:
 library(tidyverse)
 
 # Create data frame for Gantt chart
-tasks <- c("Project planning", "Pre-\nregistration","Data cleaning", "Statistical analysis", "Manuscript preparation")
-start_date <- c("2023-04-01", "2023-05-01", "2023-05-15", "2023-07-01", "2023-10-01")
-end_date <- c("2023-05-30","2023-06-15", "2023-07-15", "2023-10-31", "2024-01-01")
+# tasks <- c("Project planning", 
+#            "Pre-\nregistration",
+#            "Data cleaning", 
+#            "Statistical analysis", 
+#            "Manuscript preparation")
+tasks <- c("Project plan pending")
+
+# start_date <- c("2023-04-01", 
+#                 "2023-05-01", 
+#                 "2023-05-15", 
+#                 "2023-07-01", 
+#                 "2023-10-01")
+# end_date <- c("2023-05-30",
+#               "2023-06-15", 
+#               "2023-07-15", 
+#               "2023-10-31", 
+#               "2024-01-01")
+
+start_date <- c("2024-01-01")
+end_date <- c("2024-12-31")
+
 offset <- seq(1/length(tasks), 1, length.out = length(tasks))
 
 df <- data.frame(tasks, start_date, end_date)
@@ -86,7 +104,8 @@ df$start_date <- as.Date(df$start_date)
 df$end_date <- as.Date(df$end_date)
 
 # Set colors for chart
-colors <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7")
+# colors <- c("#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7")
+colors <- c("#D55E00")
 
 
 
