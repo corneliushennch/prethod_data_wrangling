@@ -117,7 +117,7 @@ ggplot(df, aes(xmin = start_date, xmax = end_date,
   geom_text(aes(x = start_date + (end_date - start_date)/2, y = offset + 0.5/length(tasks), 
                 label = tasks), size = 4, fontface = "bold", color = "white") +
   scale_fill_manual(values = colors) +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b %Y") +
+  scale_x_date(date_breaks = "2 months", date_labels = "%b %Y") +
   theme_minimal() +
   theme(panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),
