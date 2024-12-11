@@ -23,10 +23,10 @@ suppressPackageStartupMessages({
   library(glue) # for naming files
   library(gtsummary) # for summary statistics and tables
   # library(kableExtra) # for table formatting in Markdown
-  library(finalfit) # for tidy modeling and assessing tidy data
-  library(glmnet) # penalized regression modeling
+  # (finalfit) # for tidy modeling and assessing tidy data
+  # library(glmnet) # penalized regression modeling
   library(openxlsx) # for exporting excel files
-  library(cowplot) # for arranging plots
+  # library(cowplot) # for arranging plots
 })
 
 # custom functions

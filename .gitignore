@@ -28,4 +28,4 @@ vignettes/*.pdf
 .Renviron
 # Data and Output (upload later)
 /data/*
-/output/* 
+/output/*

@@ -14,11 +14,11 @@
 
 # 1. import SPSS file ----------------------------------------------------------
 
-raw_data <- haven::read_sav(here("data", "raw", "20230423_psychoEQExport.sav")) %>%
+raw_data <- haven::read_sav(here("data", "raw", "psychoEQExport_2.8.2024_8.5.sav")) %>%
   haven::as_factor() %>%
   select(!contains("PRN"))
 
-# 2. examine variables -------------------s--------------------------------------
+# 2. examine variables ---------------------------------------------------------
 
 # variable key for overview
 var_key <- labelled::var_label(raw_data) %>%

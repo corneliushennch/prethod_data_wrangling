@@ -12,22 +12,32 @@
 # Code written according to Hadley Wickhams "tidyverse style guide"
 # Header end ===================================================================
 
-# 1. split data into DeKIZ/TK_D ------------------------------------------------
+# 1. remove completey empty rows
+
+# raw_data_clean_filt <- raw_data_clean %>%
+#   filter(rowSums(is.na(select(., -code))) < ncol(.) - 1)
+
+# 1. tidy dataframe  -----------------------------------------------------------
+
+## 1.1. split data into DeKIZ/TK_D ---------------------------------------------
 # create a list of two data frames, one for each data source
 # select the columns that contain the data source name
 data_split <- map(
-  c("TK_D", "DeKIZ"),
-  ~ select(raw_data, CODE, all_of(contains(.x)))
+  c("tk_d", "de_kiz"),
+  ~ select(raw_data_clean, code, all_of(contains(.x)))
 ) %>%
   # replace empty strings with NA
   map(~ mutate(.x, across(where(is.character), ~ if_else(. == "", NA, .)))) %>%
   # remove rows with no data
-  map(~ filter(.x, rowSums(!is.na(select(., -CODE))) > 0)) %>%
+  # map(~ filter(.x, rowSums(!is.na(select(., -code))) > 0)) %>%
   # remove the data source name from the column names
-  map(~ rename_with(.x, ~ str_remove(., "_TK_D|_DeKIZ"))) %>%
+  map(~ rename_with(.x, ~ str_remove(., "_tk_d|_de_kiz"))) %>%
   # name the two data frames
-  set_names("TK_D", "DeKIZ")
+  set_names("tk_d", "dekiz")
 
+# check if colnames are equal
+
+setdiff(colnames(data_split[[1]]), colnames(data_split[[2]]))
 
 # 2. checking IDs and colnames -------------------------------------------------
 
