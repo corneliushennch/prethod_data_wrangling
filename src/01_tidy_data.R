@@ -49,8 +49,8 @@ data_clean <- bind_rows(data_split, .id = "var_setting") %>%
          .before = "var_setting") %>%
   select(-var_setting)
 
+# data_clean %>% filter(id_setting != var_setting) %>% glimpse()
 
-data_clean %>% filter(id_setting != var_setting) %>% glimpse()
 # 3.pivot longer and take out timepoints from variable names -------------------
 data_tidy <- data_clean %>%
   rename_with(
@@ -73,7 +73,8 @@ data_tidy <- data_clean %>%
 
 # data_tidy %>% select(code, id_setting, timepoint, contains("bd2")) %>% view()
 
-# 4. this ist the next section -------------------------------------------------
+# 4. check missings bd2sum -----------------------------------------------------
+
 # data_tidy %>%
 #   select(code, id_setting, timepoint, contains("bd2")) %>%
 #   filter(timepoint %in% c("aufnahme","verlaufsmessung","abschlussmessung") & !is.na(bd2sum)) %>%
@@ -82,7 +83,6 @@ data_tidy <- data_clean %>%
 # bdi sum admission = 699
 # bdi sum course = 510
 # bdi sum discharge = 483
-  # short summary for NAs at each timepoint
 data_tidy %>%
   group_by(timepoint) %>%
   summarize(na_count = sum(is.na(bd2sum))) %>%
@@ -103,9 +103,8 @@ wide %>%
   filter(!is.na(aufnahme) & !is.na(abschlussmessung)) %>%
   nrow()
 
-
 # 4. variable wrangling    -----------------------------------------------------
-## 4.1 DDT categories    --------------------------------------------------------
+# DDT categories -> move to different script
 ddt_vars <- c("ddt015", "ddt016", "ddt017", "ddt023")
 ddt_levels <- c("0", "1", "2", "3", "4", "5", "> 5")
 
@@ -142,23 +141,13 @@ var_key_tidy <- var_key %>%
 labelled::var_label(data_tidy) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
-setdiff(colnames(data_tidy), var_key_tidy$var_name)
+# setdiff(colnames(data_tidy), var_key_tidy$var_name)
 
-data_tidy %>%
-  filter(id_setting != var_setting) %>% View()
-
-# 6. filter completely empty cases ---------------------------------------------
-
-exclude <- tidy_data %>% filter(is.na(BD2DAT) & timepoint == "Aufnahme") %>%
-  pull(CODE)
-
-tidy_data <- tidy_data %>% filter(!(CODE %in% exclude))
-# tidy_data %>% select(print_date_vars) %>% glimpse()
 # 7. export   ------------------------------------------------------------------
 
 if (save_output) {
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))
-  write.xlsx(tidy_data, here("data", "processed", "tidy_data.xlsx"))
+  write.xlsx(data_tidy, here("data", "processed", "data_tidy.xlsx"))
 
 }
 
