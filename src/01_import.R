@@ -16,7 +16,8 @@
 
 raw_data <- haven::read_sav(here("data", "raw", "psychoEQExport_2.8.2024_8.5.sav")) %>%
   haven::as_factor() %>%
-  select(!contains("PRN"))
+  select(!contains("PRN")) %>%
+  clean_names()
 
 # 2. examine variables ---------------------------------------------------------
 
@@ -25,18 +26,8 @@ var_key <- labelled::var_label(raw_data) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "var_name", values_to = "label")
 
-# clean variable names
-raw_data_clean <- clean_names(raw_data)
-
-# variable key for overview
-var_key_clean <- labelled::var_label(raw_data) %>%
-  as.data.frame() %>%
-  pivot_longer(everything(), names_to = "var_name", values_to = "label")
-
 if (save_output) {
   # export
   write.xlsx(var_key, here("output", "tables", "variable_key.xlsx"))
 
-  write.xlsx(var_key_clean,
-             here("output", "tables", "variable_var_key_clean.xlsx"))
 }

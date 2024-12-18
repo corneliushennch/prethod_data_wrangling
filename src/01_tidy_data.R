@@ -24,106 +24,128 @@
 # select the columns that contain the data source name
 data_split <- map(
   c("tk_d", "de_kiz"),
-  ~ select(raw_data_clean, code, all_of(contains(.x)))
+  ~ select(raw_data, code, all_of(contains(.x)))
 ) %>%
   # replace empty strings with NA
   map(~ mutate(.x, across(where(is.character), ~ if_else(. == "", NA, .)))) %>%
   # remove rows with no data
-  # map(~ filter(.x, rowSums(!is.na(select(., -code))) > 0)) %>%
+  map(~ filter(.x, rowSums(!is.na(select(., -code))) > 0)) %>%
   # remove the data source name from the column names
   map(~ rename_with(.x, ~ str_remove(., "_tk_d|_de_kiz"))) %>%
   # name the two data frames
   set_names("tk_d", "dekiz")
 
-# check if colnames are equal
+# check if column names are equal -> True
+identical(colnames(data_split[[1]]), colnames(data_split[[2]]))
 
-setdiff(colnames(data_split[[1]]), colnames(data_split[[2]]))
+# bind together to single data frame
+data_clean <- bind_rows(data_split, .id = "var_setting") %>%
+  # ID in caps
+  mutate(code = toupper(code)) %>%
+  # exclude test rows
+  filter(!str_detect(code, "TEST")) %>%
+  # add setting variable (from ID col)
+  mutate(setting = if_else(str_detect(code, "DK"), "dekiz", "tk_d"),
+         .before = "var_setting") %>%
+  select(-var_setting)
 
-# 2. checking IDs and colnames -------------------------------------------------
 
-# completely empty records, that get excluded above
-empty_records <- setdiff(
-  raw_data$CODE,
-  c(data_split[["TK_D"]]$CODE, data_split[["DeKIZ"]]$CODE)
-)
-
-# filter(raw_data, CODE %in% empty_records) %>% glimpse()
-
-# Spelling error Katamese
-data_split[["DeKIZ"]] <- data_split[["DeKIZ"]] %>%
-  rename_with(~ str_replace(., "Katamese", "Katamnese"))
-
-# check if all columns match
-# compare_df_cols_same(data_split[[1]], data_split[[2]]) # -> complete match
-# compare_df <- compare_df_cols(data_split[["TK_D"]], data_split[["DeKIZ"]])
-# compare_df %>% View()
-
-# 3. combining  ----------------------------------------------------------------
-# binding the two parts back together for further processing
-
-# bind the data frames together -> labels get lost in this step
-tidy_data <- bind_rows(data_split, .id = "setting") %>%
-  # rename the columns
+data_clean %>% filter(id_setting != var_setting) %>% glimpse()
+# 3.pivot longer and take out timepoints from variable names -------------------
+data_tidy <- data_clean %>%
   rename_with(
-    ~ gsub("^([[:alnum:]]+)(Aufnahme|Verlaufsmessung|Abschlussmessung|Katamnese)", "\\1_\\2", .),
-    -CODE
+    ~ gsub(
+      "^([[:alnum:]]+)(aufnahme|verlaufsmessung|abschlussmessung)",
+      "\\1_\\2",
+      .
+    ),
+    -c("code", "var_setting", "id_setting")
   ) %>%
   # pivot the data frame
   pivot_longer(
-    cols = -c(CODE, setting),
+    cols = -c(code, id_setting, var_setting),
     names_to = c(".value", "timepoint"),
     names_sep = "_"
   ) %>%
   # remove duplicates
-  distinct(CODE, timepoint, .keep_all = TRUE)
+  distinct(code, timepoint, .keep_all = TRUE)
+
+
+# data_tidy %>% select(code, id_setting, timepoint, contains("bd2")) %>% view()
+
+# 4. this ist the next section -------------------------------------------------
+# data_tidy %>%
+#   select(code, id_setting, timepoint, contains("bd2")) %>%
+#   filter(timepoint %in% c("aufnahme","verlaufsmessung","abschlussmessung") & !is.na(bd2sum)) %>%
+#   View()
+
+# bdi sum admission = 699
+# bdi sum course = 510
+# bdi sum discharge = 483
+  # short summary for NAs at each timepoint
+data_tidy %>%
+  group_by(timepoint) %>%
+  summarize(na_count = sum(is.na(bd2sum))) %>%
+  mutate(bd2sum_value = 727 - na_count)
+
+# into wide format for counting
+wide <- data_tidy %>%
+  select(code, timepoint, bd2sum) %>%
+  pivot_wider(names_from = timepoint, values_from = bd2sum)
+
+# bdi sum all three = 385
+wide %>%
+  filter(!is.na(aufnahme) & !is.na(verlaufsmessung) & !is.na(abschlussmessung)) %>%
+  nrow()
+
+# bdi sum admission + discharge = 467
+wide %>%
+  filter(!is.na(aufnahme) & !is.na(abschlussmessung)) %>%
+  nrow()
 
 
 # 4. variable wrangling    -----------------------------------------------------
 ## 4.1 DDT categories    --------------------------------------------------------
-ddt_vars <- c("DDT015", "DDT016", "DDT017", "DDT023")
+ddt_vars <- c("ddt015", "ddt016", "ddt017", "ddt023")
 ddt_levels <- c("0", "1", "2", "3", "4", "5", "> 5")
 
-# collopase DDT variable categories
-tidy_data <- tidy_data %>%
-  mutate(
-    across(all_of(ddt_vars), round),
-    across(all_of(ddt_vars), ~if_else(. > 5, "> 5", as.character(.))),
-    across(all_of(ddt_vars), ~factor(., levels = ddt_levels))
-  ) %>%
+data_tidy %>% select(all_of(ddt_vars)) %>% View()
+
+# collapse DDT variable categories
+data_tidy <- data_tidy %>%
+  mutate(across(all_of(ddt_vars), round),
+         across(all_of(ddt_vars), ~ if_else(. > 5, "> 5", as.character(.))),
+         across(all_of(ddt_vars), ~ factor(., levels = ddt_levels))) %>%
   # order of timepoints
-  mutate(timepoint = factor(timepoint, levels = c("Aufnahme", "Verlaufsmessung",
-                                "Abschlussmessung", "Katamnese")))
-
-## 4.2 small corrections -------------------------------------------------------
-# years after suicide attempt -> two year numbers (2022, 2020)
-# tidy_data %>%
-#   filter(timepoint == "Aufnahme" & setting == "DeKIZ") %>%
-#   filter(DDT024 == 2022 | DDT024 == 2020) %>%
-#   mutate(test = FLZDAT - DDT024) %>%
-#   select(FLZDAT, DDT024, test)
-
-# correcting these two depending on admission date
-tidy_data <- tidy_data %>%
-  mutate(DDT024 = case_when(
-    DDT024 == 2020 ~ 0,
-    DDT024 == 2022 ~ 1,
-    TRUE ~ DDT024
+  mutate(timepoint = factor(
+    timepoint,
+    levels = c("aufnahme", "verlaufsmessung", "abschlussmessung")
   ))
 
 # 5. re-label tidy variable key ------------------------------------------------
 var_key_tidy <- var_key %>%
   mutate(
-    across(everything(), ~ str_replace(., "Katamese", "Katamnese")),
-    across(everything(),
-           ~ str_remove_all(., "(Aufnahme|Verlaufsmessung|Abschlussmessung|Katamnese)")),
-    across(everything(), ~ str_remove_all(., "(_TK_D|_DeKIZ)"))
-  ) %>%
+    var_name =
+      str_remove_all(var_name, "(aufnahme|verlaufsmessung|abschlussmessung)") %>%
+      str_remove_all(., "(_tk_d|_de_kiz)") %>%
+      str_remove_all("_$"),
+    label =
+      str_remove_all(label, "( zu| Aufnahme| Verlaufsmessung| Abschlussmessung)") %>%
+      str_remove_all("(_TK_D|_DeKIZ)")
+  )  %>%
   distinct(var_name, .keep_all = TRUE) %>%
-  add_row(var_name = "setting", label = "Behandlungssetting")
+  add_row(var_name = "setting", label = "treatment setting") %>%
+  add_row(var_name = "timepoint", label = "measurement timepoint")
+
 
 # relabel tidy dataset
-labelled::var_label(tidy_data) <- setNames(as.list(var_key_tidy$label),
+labelled::var_label(data_tidy) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
+
+setdiff(colnames(data_tidy), var_key_tidy$var_name)
+
+data_tidy %>%
+  filter(id_setting != var_setting) %>% View()
 
 # 6. filter completely empty cases ---------------------------------------------
 
