@@ -51,7 +51,7 @@ data_clean <- bind_rows(data_split, .id = "var_setting") %>%
 
 # data_clean %>% filter(id_setting != var_setting) %>% glimpse()
 
-# 3.pivot longer and take out timepoints from variable names -------------------
+## 1.2.pivot longer and take out timepoints from variable names -------------------
 data_tidy <- data_clean %>%
   rename_with(
     ~ gsub(
@@ -59,11 +59,11 @@ data_tidy <- data_clean %>%
       "\\1_\\2",
       .
     ),
-    -c("code", "var_setting", "id_setting")
+    -c("code", "setting")
   ) %>%
   # pivot the data frame
   pivot_longer(
-    cols = -c(code, id_setting, var_setting),
+    cols = -c(code, setting),
     names_to = c(".value", "timepoint"),
     names_sep = "_"
   ) %>%
@@ -71,9 +71,9 @@ data_tidy <- data_clean %>%
   distinct(code, timepoint, .keep_all = TRUE)
 
 
-# data_tidy %>% select(code, id_setting, timepoint, contains("bd2")) %>% view()
+# data_tidy %>% select(code, setting, timepoint, contains("bd2")) %>% view()
 
-# 4. check missings bd2sum -----------------------------------------------------
+# 2. check missings bd2sum -----------------------------------------------------
 
 # data_tidy %>%
 #   select(code, id_setting, timepoint, contains("bd2")) %>%
@@ -103,12 +103,23 @@ wide %>%
   filter(!is.na(aufnahme) & !is.na(abschlussmessung)) %>%
   nrow()
 
+complete_cases <- wide %>%
+  filter(!is.na(aufnahme) & !is.na(abschlussmessung)) %>%
+  pull(code)
+
+# 3. filter for complete cases -------------------------------------------------
+# bdi sum admission and discharge n = 467
+
+data_tidy <- data_tidy %>%
+  filter(code %in% complete_cases)
+
 # 4. variable wrangling    -----------------------------------------------------
-# DDT categories -> move to different script
+## 4.1 DDT categories     ------------------------------------------------------
+# -> move to different script
 ddt_vars <- c("ddt015", "ddt016", "ddt017", "ddt023")
 ddt_levels <- c("0", "1", "2", "3", "4", "5", "> 5")
 
-data_tidy %>% select(all_of(ddt_vars)) %>% View()
+# data_tidy %>% select(all_of(ddt_vars)) %>% View()
 
 # collapse DDT variable categories
 data_tidy <- data_tidy %>%
@@ -120,6 +131,8 @@ data_tidy <- data_tidy %>%
     timepoint,
     levels = c("aufnahme", "verlaufsmessung", "abschlussmessung")
   ))
+
+
 
 # 5. re-label tidy variable key ------------------------------------------------
 var_key_tidy <- var_key %>%
@@ -137,11 +150,24 @@ var_key_tidy <- var_key %>%
   add_row(var_name = "timepoint", label = "measurement timepoint")
 
 
+
+# setdiff(colnames(data_tidy), var_key_tidy$var_name)
+
+# 6. relabel basisdoku timepoint -----------------------------------------------
+bas_vars <- names(data_tidy) %>% str_subset("^bas")
+
+# Shift "abschluss" values of bas* to "aufnahme" within each id
+data_tidy <- data_tidy %>%
+  group_by(code) %>%
+  mutate(across(
+    all_of(bas_vars),
+    ~ ifelse(timepoint == "aufnahme", .[timepoint == "abschlussmessung"], .)
+  )) %>%
+  ungroup()
+
 # relabel tidy dataset
 labelled::var_label(data_tidy) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
-
-# setdiff(colnames(data_tidy), var_key_tidy$var_name)
 
 # 7. export   ------------------------------------------------------------------
 

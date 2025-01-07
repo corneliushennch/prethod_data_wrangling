@@ -14,16 +14,16 @@
 # 1. summary of BAS with missings ----------------------------------------------
 
 # vars to include
-summary_vars <- colnames(tidy_data) %>% str_subset("DDT[:digit:]")
+summary_vars <- colnames(data_tidy) %>% str_subset("ddt[:digit:]")
 
-table_one <- tidy_data %>%
-  filter(timepoint == "Aufnahme") %>%
+table_one <- data_tidy %>%
+  filter(timepoint == "aufnahme") %>%
   tbl_summary(by = "setting",
               include = c(summary_vars),
               missing_text = "Missing",
               statistic = list(
-                DDT024 ~ "{mean} ({sd})",
-                DDT025 ~ "{mean} ({sd})")
+                ddt024 ~ "{mean} ({sd})",
+                ddt025 ~ "{mean} ({sd})")
   ) %>%
   add_overall() %>%
   add_p() %>%

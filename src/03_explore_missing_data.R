@@ -14,28 +14,28 @@
 # 1. add variable for missings per questionnaire -----------------------------
 
 # Identify the items in each questionnaire
-cols_by_quest <- split(names(tidy_data)[-c(1:4)],
-                       substr(names(tidy_data)[-c(1:4)], 1, 3)) %>%
-  map(~ c("CODE","timepoint", .x))
+cols_by_quest <- split(names(data_tidy)[-c(1:3)],
+                       substr(names(data_tidy)[-c(1:3)], 1, 3)) %>%
+  map(~ c("code","timepoint", .x))
 
 # create a list of dataframes, each dataframe contains the missing values for
 # each questionnaire
 missings_by_quest <- purrr::imap(cols_by_quest, ~ {
   # select the columns of the question
-  df <- tidy_data %>% select(all_of(.x))
+  df <- data_tidy %>% select(all_of(.x))
   # count the number of missing values per row -> way faster than rowwise
   df$NA_per_row <- rowSums(is.na(df))
   # calculate the percentage of missing values per row
   df <- df %>% mutate(NA_percentage = NA_per_row/(length(.x) - 2)) %>%
     # select the columns that we want to keep
-    select(CODE, timepoint, NA_per_row, NA_percentage)
+    select(code, timepoint, NA_per_row, NA_percentage)
   # rename the columns
   colnames(df)[3:4] <- paste(.y, colnames(df)[3:4], sep = "_")
   # return the dataframe
   return(df)
 }) %>%
-  plyr::join_all(dfs = ., by = c("CODE", "timepoint"), match = "first") %>%
-  left_join(tidy_data, ., by = c("CODE", "timepoint"))
+  plyr::join_all(dfs = ., by = c("code", "timepoint"), match = "first") %>%
+  left_join(data_tidy, ., by = c("code", "timepoint"))
 
 # 2. summary of missings per timepoint/questionnaire ---------------------------
 
@@ -50,7 +50,7 @@ missings_by_quest <- missings_by_quest %>%
 
 na_fct_cols <- str_subset(colnames(missings_by_quest), "_fct")
 
-missing_summary <- map(c("DeKIZ", "TK_D"),
+missing_summary <- map(c("dekiz", "tk_d"),
                        ~ filter(missings_by_quest, setting == .x)) %>%
   map(~ tbl_summary(.x,
     by = "timepoint",
@@ -59,21 +59,21 @@ missing_summary <- map(c("DeKIZ", "TK_D"),
 
 missing_summary_combined <- tbl_merge(
   tbls = missing_summary,
-  tab_spanner = c("DeKIZ", "TK_D")
+  tab_spanner = c("deliz", "tk_d")
 )
 
 # 2. Missing plot --------------------------------------------------------------
 ## 2.1 overview missing plot from finalfit package -----------------------------
-missing_plots <- map(c("DeKIZ", "TK_D"), ~ filter(
-    .data = labelled::remove_var_label(tidy_data) %>% arrange(timepoint),
+missing_plots <- map(c("dekiz", "tk_d"), ~ filter(
+    .data = labelled::remove_var_label(data_tidy) %>% arrange(timepoint),
     setting == .x)) %>%
-  map(~missing_plot(.x)) %>%
-  set_names(c("DeKIZ", "TK_D"))
+  map(~finalfit::missing_plot(.x)) %>%
+  set_names(c("dekiz", "tk_d"))
 
 ## 2.2 with naniar::gg_miss_fct ordered by timepoint ---------------------------
-miss_plots <- map(c("DeKIZ", "TK_D"), ~filter(tidy_data, setting == .x)) %>%
+miss_plots <- map(c("dekiz", "tk_d"), ~filter(data_tidy, setting == .x)) %>%
   map(~naniar::gg_miss_fct(.x, fct = timepoint)) %>%
-  set_names(c("DeKIZ", "TK_D")) %>%
+  set_names(c("dekiz", "tk_d")) %>%
   imap(~ .x +
          labs(title = glue("Missing data {.y}")) +
          theme(legend.position = "none"))
@@ -96,11 +96,11 @@ heat_data <- missings_by_quest %>%
          NA_percentage = NA_percentage * 100)
 
 # create a list of two plots
-missing_heatmap <- map(c("DeKIZ", "TK_D"), ~ {
+missing_heatmap <- map(c("dekiz", "tk_d"), ~ {
   # filter the data to only include the setting
   filter(heat_data , setting == .x) %>%
     # create a plot with the x axis as timepoint, y axis as CODE, and fill as NA_percentage
-    ggplot(aes(x = timepoint, y = CODE, fill = NA_percentage)) +
+    ggplot(aes(x = timepoint, y = code, fill = NA_percentage)) +
     # create a tile plot
     geom_tile(stat = "identity") +
     # colour gradient
@@ -127,8 +127,7 @@ heat_combi <- plot_grid(
           strip.text = element_blank(),
           strip.background = element_blank()) +
     labs(y = "TK-D"),
-  nrow = 2,
-  rel_heights = c(0.35,0.65)
+  nrow = 2
 )
 
 if (save_output) {
@@ -142,10 +141,11 @@ if (save_output) {
 
 # 3. missing data in quest. scores ---------------------------------------------
 
-quest_scores <- c("FLZM09", "B18O03", "BD2SUM", "CTQO00", "BADO01",
-                  "DASSUM", "IE4M00", "DDTDAT", "BASDAT")
+quest_scores <- c("FLZM00", "bsisum", "BD2SUM", "CTQO00", "BADO01",
+                  "dasmit", "IE4M00", "DDTDAT", "BASDAT") %>%
+  tolower()
 
-miss_var_plots <- map(c("DeKIZ", "TK_D"), ~filter(tidy_data, setting == .x)) %>%
+miss_var_plots <- map(c("dekiz", "tk_d"), ~filter(data_tidy, setting == .x)) %>%
   map(~select(.x, timepoint, all_of(quest_scores))) %>%
   map(~naniar::gg_miss_var(.x, facet = timepoint))
 
@@ -184,47 +184,20 @@ if (save_output) {
 
 }
 
-# 5. filter cases with missing BAS data ----------------------------------------
-
-# filtering for cases that don't have any bdi data at the end of therapy
-missing_bdi_ids <- tidy_data %>%
-  filter(is.na(BD2DAT) & timepoint == "Abschlussmessung") %>%
-  pull(CODE)
-
-# remove missing cases from tidy data
-complete_bdi <- tidy_data %>%
-  filter(!(CODE %in% missing_bdi_ids))
-
-## 5.1 create lists with variables  --------------------------------------------
-
-# filter for Basisdoku at end of therapy and split into two settings
-missing_bas_list <- complete_bdi %>%
-  filter(timepoint == "Abschlussmessung") %>%
-  select(setting, CODE, contains("BAS")) %>%
-  split(., .$setting)
-
-# how many missings
-missing_bas_list %>% map( ~ .x %>%
-                            #filter(is.na(BASDAT)) %>%
-                            nrow())
-
-# same thing but for basisdoku patient*in
-missing_ddt_list <- complete_bdi %>%
-  filter(timepoint == "Aufnahme") %>%
-  select(setting, CODE, contains("DDT")) %>%
-  split(., .$setting)
-
-# export
+# 5. prepare table for manual completion ---------------------------------------
+# mainly BAS and DDT entries
+missings_table <- data_tidy %>%
+  filter(timepoint == "aufnahme") %>%
+  select(code, timepoint, setting, starts_with(c("bas", "ddt")))
 
 if (save_output) {
 
 # data frame with variable explanation
-var_key_bas <- labelled::var_label(missing_bas_list[[1]]) %>%
-  as.data.frame() %>%
-  pivot_longer(everything(), names_to = "variable_name", values_to = "label")
+var_key_bas <- labelled::var_label(missings_table) %>%
+  enframe()
 
-# Create a vector of sheet names
-sheet_names <- c("DeKIZ", "TK_D", "variable key")
+
+names(missings_table) <- labelled::var_label(missings_table)
 
 ## 5.2 basisdoku therapist   ---------------------------------------------------
 
@@ -232,26 +205,21 @@ sheet_names <- c("DeKIZ", "TK_D", "variable key")
 missing_wb <- createWorkbook()
 
 # Map over the sheet names vector and add worksheets to the workbook
-sheet_list <- map(sheet_names, ~addWorksheet(wb = missing_wb, sheetName = .x))
+# sheet_list <- map(sheet_names, ~addWorksheet(wb = missing_wb, sheetName = .x))
 
 # Map over the missing_bas_list and sheet_list, and write data to the
 # corresponding worksheets in the workbook
-map2(
-  c(missing_bas_list, list(var_key_bas)),
-  sheet_list,
-  ~writeData(
+writeData(
     wb = missing_wb,
-    x = .x,
-    sheet = .y,
+    x = missings_table,
+    sheet = addWorksheet(wb = missing_wb, sheetName = "basidoku_missings"),
     keepNA = TRUE,
-    na.string = "NA"
-  )
-)
+    na.string = "NA")
 
 # Save the workbook to a specified file path
 saveWorkbook(
   missing_wb,
-  here("output","tables","missing_basis_therap.xlsx"),
+  here("output","tables","missing_basisdoku.xlsx"),
   overwrite = TRUE
 )
 
