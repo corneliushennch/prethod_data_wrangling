@@ -26,7 +26,7 @@ suppressPackageStartupMessages({
   # (finalfit) # for tidy modeling and assessing tidy data
   # library(glmnet) # penalized regression modeling
   library(openxlsx) # for exporting excel files
-  # library(cowplot) # for arranging plots
+  library(cowplot) # for arranging plots
 })
 
 # custom functions

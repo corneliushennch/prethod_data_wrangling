@@ -19,6 +19,14 @@ raw_data <- haven::read_sav(here("data", "raw", "psychoEQExport_2.8.2024_8.5.sav
   select(!contains("PRN")) %>%
   clean_names()
 
+dekiz_patients <- readxl::read_excel(here("data", "raw", "PEQ_Liste_DeKIZ_23.xlsx"),
+                                     range = "B1:E384",
+                                     col_types = c("text", "text", "text", "date")) %>%
+  rename(code = `PEQ No.`)
+
+# add labels
+labelled::var_label(dekiz_patients) <- names(dekiz_patients)
+
 # 2. examine variables ---------------------------------------------------------
 
 # variable key for overview

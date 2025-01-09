@@ -146,8 +146,8 @@ var_key_tidy <- var_key %>%
       str_remove_all("(_TK_D|_DeKIZ)")
   )  %>%
   distinct(var_name, .keep_all = TRUE) %>%
-  add_row(var_name = "setting", label = "treatment setting") %>%
-  add_row(var_name = "timepoint", label = "measurement timepoint")
+  add_row(var_name = "setting", label = "setting") %>%
+  add_row(var_name = "timepoint", label = "timepoint")
 
 
 

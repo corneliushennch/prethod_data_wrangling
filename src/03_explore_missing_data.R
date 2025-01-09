@@ -182,13 +182,15 @@ if (save_output) {
          height = 28, width = 6)
 
 
-}
+ }
 
 # 5. prepare table for manual completion ---------------------------------------
 # mainly BAS and DDT entries
 missings_table <- data_tidy %>%
   filter(timepoint == "aufnahme") %>%
-  select(code, timepoint, setting, starts_with(c("bas", "ddt")))
+  select(code, timepoint, setting, starts_with(c("bas", "ddt"))) %>%
+  left_join(dekiz_patients, by = "code") %>%
+  select(code, timepoint, setting, Nachname, Vorname, Geburtsdatum, everything())
 
 if (save_output) {
 
@@ -196,10 +198,8 @@ if (save_output) {
 var_key_bas <- labelled::var_label(missings_table) %>%
   enframe()
 
-
+# replace names with labels
 names(missings_table) <- labelled::var_label(missings_table)
-
-## 5.2 basisdoku therapist   ---------------------------------------------------
 
 # Create an empty workbook
 missing_wb <- createWorkbook()
@@ -223,43 +223,7 @@ saveWorkbook(
   overwrite = TRUE
 )
 
-## 5.2 basisdoku patient   -----------------------------------------------------
-
-# data frame with variable explanation
-var_key_ddt <- labelled::var_label(missing_ddt_list[[1]]) %>%
-  as.data.frame() %>%
-  pivot_longer(everything(), names_to = "variable_name", values_to = "label")
-
-# Create an empty workbook
-missing_wb <- createWorkbook()
-
-# Map over the sheet names vector and add worksheets to the workbook
-sheet_list <- map(sheet_names, ~addWorksheet(wb = missing_wb, sheetName = .x))
-
-# Map over the missing_bas_list and sheet_list, and write data to the
-# corresponding worksheets in the workbook
-map2(
-  c(missing_ddt_list, list(var_key_ddt)),
-  sheet_list,
-  ~writeData(
-    wb = missing_wb,
-    x = .x,
-    sheet = .y,
-    keepNA = TRUE,
-    na.string = "NA"
-  )
-)
-
-# Save the workbook to a specified file path
-saveWorkbook(
-  missing_wb,
-  here("output","tables","missing_basis_pat.xlsx"),
-  overwrite = TRUE
-)
-
 }
-
-
 
 
 
