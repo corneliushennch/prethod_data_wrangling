@@ -59,7 +59,7 @@ missing_summary <- map(c("dekiz", "tk_d"),
 
 missing_summary_combined <- tbl_merge(
   tbls = missing_summary,
-  tab_spanner = c("deliz", "tk_d")
+  tab_spanner = c("dekiz", "tk_d")
 )
 
 # 2. Missing plot --------------------------------------------------------------
@@ -185,12 +185,14 @@ if (save_output) {
  }
 
 # 5. prepare table for manual completion ---------------------------------------
-# mainly BAS and DDT entries
+# mainly BAS and some DDT entries
 missings_table <- data_tidy %>%
   filter(timepoint == "aufnahme") %>%
   select(code, timepoint, setting, starts_with(c("bas", "ddt"))) %>%
-  left_join(dekiz_patients, by = "code") %>%
-  select(code, timepoint, setting, Nachname, Vorname, Geburtsdatum, everything())
+  left_join(patient_id, by = "code") %>%
+  select(code, timepoint, setting, Nachname, Vorname, Geburtsdatum, everything()) %>%
+  mutate(Nachname = str_remove_all(Nachname, "Fr. |Fr.|Hr. |Hr."))
+
 
 if (save_output) {
 
