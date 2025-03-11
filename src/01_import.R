@@ -25,6 +25,8 @@ dekiz_patients <- readxl::read_excel(here("data", "raw", "PEQ_Liste_DeKIZ_23.xls
                                      col_types = c("text", "text", "text", "date")) %>%
   rename(code = `PEQ No.`)
 
+## 1.1 import identifiers ------------------------------------------------------
+
 # import tk identifiers
 tk_patients <- readxl::read_excel(here("data", "raw", "PEQ_Liste_TK.xlsx"),
                                      # range = "B1:E384",
@@ -39,6 +41,25 @@ patient_id <- bind_rows(tk_patients, dekiz_patients)
 # add labels
 labelled::var_label(patient_id) <- names(patient_id)
 
+## 1.2 import BSI-18 data ------------------------------------------------------
+
+# bsi_data <- readxl::read_excel(here("data", "raw", "BSI18_20_24_tk_dekiz.xlsx"),
+#                                guess_max = 1600) %>%
+#   clean_names()
+
+bsi_dekiz <- readxl::read_excel(here("data", "raw", "BSI_18_DeKIZ.xlsx"),
+                               guess_max = 1600) %>%
+  clean_names() %>%
+  rename_all(~str_remove(., "_de_kiz"))
+
+bsi_tk <- readxl::read_excel(here("data", "raw", "BSI_18_TK_D.xlsx"),
+                               guess_max = 1600) %>%
+  clean_names() %>%
+  rename_all(~str_remove(., "_tk_d"))
+
+bsi_data <- bind_rows(bsi_dekiz, bsi_tk, .id = "setting") %>%
+  mutate(code = toupper(code),
+         setting = if_else(str_detect(code, "DK"), "dekiz", "tk_d"))
 
 # 2. examine variables ---------------------------------------------------------
 

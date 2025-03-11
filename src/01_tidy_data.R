@@ -51,7 +51,7 @@ data_clean <- bind_rows(data_split, .id = "var_setting") %>%
 
 # data_clean %>% filter(id_setting != var_setting) %>% glimpse()
 
-## 1.2.pivot longer and take out timepoints from variable names -------------------
+## 1.2.pivot longer and take out timepoints from variable names ----------------
 data_tidy <- data_clean %>%
   rename_with(
     ~ gsub(
@@ -133,7 +133,6 @@ data_tidy <- data_tidy %>%
   ))
 
 
-
 # 5. re-label tidy variable key ------------------------------------------------
 var_key_tidy <- var_key %>%
   mutate(
@@ -149,8 +148,6 @@ var_key_tidy <- var_key %>%
   add_row(var_name = "setting", label = "setting") %>%
   add_row(var_name = "timepoint", label = "timepoint")
 
-
-
 # setdiff(colnames(data_tidy), var_key_tidy$var_name)
 
 # 6. relabel basisdoku timepoint -----------------------------------------------
@@ -165,13 +162,47 @@ data_tidy <- data_tidy %>%
   )) %>%
   ungroup()
 
-# relabel tidy dataset
+# relabel tidy data set
 labelled::var_label(data_tidy) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
-# 7. export   ------------------------------------------------------------------
+# 7. tidy and add BSI-18 data --------------------------------------------------
+shared_ids <- intersect(data_tidy$code, toupper(bsi_data$code))
+
+# this was necessary to pivot longer both for setting and timepoints
+# bsi_data_tidy <- bsi_data %>%
+#   select(code, contains(c("_tk_d","_de_kiz"))) %>%
+#   select(-matches("katamnese|katamese")) %>%
+#   mutate(code = toupper(code)) %>%
+#   filter(code %in% data_tidy$code) %>%
+#   mutate(across(where(is.character), ~ if_else(. == "", NA, .))) %>%
+#   rename_with(~ gsub(
+#     pattern = "^(.*?)(aufnahme|verlaufsmessung|abschlussmessung)_(tk_d|de_kiz)$", # Regex pattern
+#     replacement = "\\1.\\3.\\2", # Replace with "base.setting.timepoint"
+#     .x
+#   )) %>%
+#   pivot_longer(
+#     cols = -code, # Pivot all columns
+#     names_to = c(".value", "setting", "timepoint"), # Separate into base, setting, and timepoint
+#     names_sep = "\\." # Use "." as the separator
+#   ) %>%
+#   mutate(setting = str_replace_all(setting, "de_kiz", "dekiz")) %>%
+# # filtering
+#     filter((str_detect(code, "DK") & setting == "dekiz") |
+#              (str_detect(code, "^[0-9]+$") & setting == "tk_d"))
+
+bsi_data_tidy <- bsi_data %>%
+  rename_with(~ gsub(
+    pattern = "^(.*?)(aufnahme|verlaufsmessung|abschlussmessung)$",
+    replacement = "\\1_\\2", .x), !contains("_")) %>%
+  pivot_longer(cols = -c(code, setting),
+               names_to = c(".value", "timepoint"),
+               names_sep = "_")
+
+# 8. export   ------------------------------------------------------------------
 
 if (save_output) {
+
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))
   write.xlsx(data_tidy, here("data", "processed", "data_tidy.xlsx"))
 

@@ -62,6 +62,81 @@ missing_summary_combined <- tbl_merge(
   tab_spanner = c("dekiz", "tk_d")
 )
 
+missings_bsi_1 <- tbl_summary(data_tidy,
+                              by = "timepoint",
+                              include = "bsisum",
+                              missing_text = "Missing",
+                              missing_stat = "{N_miss}, ({p_miss}%)")
+
+
+missings_bsi_2 <- tbl_summary(bsi_data_tidy,
+                              by = "timepoint",
+                              include = "b18sum",
+                              missing_text = "Missing",
+                              missing_stat = "{N_miss}, ({p_miss}%)")
+
+bsi_comparison <- data_tidy %>%
+  select(code, timepoint, setting, bsisum) %>%
+  left_join(
+    select(bsi_data_tidy, code, timepoint, setting, b18sum),
+    by = c("code", "timepoint", "setting")
+  ) %>%
+  mutate(timepoint = factor(timepoint,
+                            levels = c("aufnahme", "verlaufsmessung", "abschlussmessung")),
+         setting = factor(setting,
+                            levels = c("tk_d", "dekiz")))
+
+# any missings in the new data?
+bsi_comparison %>% filter(is.na(b18sum) & !is.na(bsisum))
+
+# 1. Overall percentage of missing values per timepoint for `bsisum` and `b18sum`
+bsi_pct_summary <- bsi_comparison %>%
+  group_by(setting, timepoint) %>%
+  summarize(
+    n = n(),
+    pct_bsi_old = mean(!is.na(bsisum)) * 100,
+    pct_bsi_new = mean(!is.na(b18sum)) * 100,
+    pct_bsi_new_missing = mean(is.na(b18sum)) * 100,
+  )
+
+
+# 2. Number of new values per patient and timepoint
+new_val_summary <- bsi_comparison %>%
+  group_by(code, timepoint, setting) %>%
+  summarize(
+    new_values_count = sum(!is.na(b18sum) & (is.na(bsisum) | b18sum != bsisum)),
+    .groups = "drop" # Ungroup after summarizing
+  ) %>%
+  filter(new_values_count == 1) %>%
+  count(setting, timepoint, .drop = FALSE, name = "n_bsi_new")
+
+old_val_summary <- bsi_comparison %>%
+  group_by(code, timepoint, setting) %>%
+  summarize(
+    bsi_values_count = sum(!is.na(bsisum)),
+    .groups = "drop" # Ungroup after summarizing
+  ) %>%
+  filter(bsi_values_count == 1) %>%
+  count(setting, timepoint, .drop = FALSE, name = "n_bsi_old")
+
+bsi_total_summary <- left_join(old_val_summary, new_val_summary,
+                               by = c("timepoint", "setting")) %>%
+  mutate(n_bsi_total = n_bsi_old + n_bsi_new)
+
+bsi_summary <- left_join(bsi_total_summary, bsi_pct_summary,
+                         by = c("setting", "timepoint")) %>%
+  select(setting, timepoint, n, everything()) %>%
+  mutate(across(contains("pct"), ~ round(.x, 2)))
+
+bsi_id_missing <- bsi_comparison %>%
+  filter(timepoint == "aufnahme" & is.na(b18sum) & is.na(bsisum)) %>%
+  pull(code)
+
+if (save_output) {
+  write.xlsx(bsi_summary, "output/tables/bsi_data_summary.xlsx")
+  write.xlsx(tibble(code = bsi_id_missing), here("output", "tables", "code_bsi18_missing.xlsx"))
+  }
+
 # 2. Missing plot --------------------------------------------------------------
 ## 2.1 overview missing plot from finalfit package -----------------------------
 missing_plots <- map(c("dekiz", "tk_d"), ~ filter(
