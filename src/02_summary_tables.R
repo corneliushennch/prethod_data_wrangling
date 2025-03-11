@@ -36,4 +36,3 @@ if (save_output) {
     as_hux_xlsx(here("output", "tables", glue("{today}_summary_table.xlsx")))
 }
 
-data_tidy_updated %>% filter(ddt014 == "ja")

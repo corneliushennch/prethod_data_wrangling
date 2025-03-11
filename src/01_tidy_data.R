@@ -213,12 +213,13 @@ labelled::var_label(data_tidy_updated) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
 
+
 # 9. export   ------------------------------------------------------------------
 
 if (save_output) {
 
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))
-  write.xlsx(data_tidy, here("data", "processed", "data_tidy_updated.xlsx"))
+  write.xlsx(data_tidy_updated, here("data", "processed", "data_tidy_updated.xlsx"))
 
 }
 
