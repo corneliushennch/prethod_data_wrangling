@@ -16,10 +16,10 @@
 # vars to include
 summary_vars <- colnames(data_tidy) %>% str_subset("ddt[:digit:]")
 
-table_one <- data_tidy %>%
+table_one <- data_tidy_updated %>%
   filter(timepoint == "aufnahme") %>%
   tbl_summary(by = "setting",
-              include = c(summary_vars),
+              include = all_of(summary_vars),
               missing_text = "Missing",
               statistic = list(
                 ddt024 ~ "{mean} ({sd})",
@@ -36,3 +36,4 @@ if (save_output) {
     as_hux_xlsx(here("output", "tables", glue("{today}_summary_table.xlsx")))
 }
 
+data_tidy_updated %>% filter(ddt014 == "ja")

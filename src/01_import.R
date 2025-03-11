@@ -61,7 +61,12 @@ bsi_data <- bind_rows(bsi_dekiz, bsi_tk, .id = "setting") %>%
   mutate(code = toupper(code),
          setting = if_else(str_detect(code, "DK"), "dekiz", "tk_d"))
 
-# 2. examine variables ---------------------------------------------------------
+# 1.3 import new bas data ------------------------------------------------------
+badok <- readxl::read_excel(here("data", "processed",
+                                 "missing_basisdoku_curated.xlsx"), sheet = 1,
+                            guess_max = 1600)
+
+# 2. examine variable labels ---------------------------------------------------
 
 # variable key for overview
 var_key <- labelled::var_label(raw_data) %>%

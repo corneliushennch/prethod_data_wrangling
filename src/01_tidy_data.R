@@ -167,30 +167,10 @@ labelled::var_label(data_tidy) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
 # 7. tidy and add BSI-18 data --------------------------------------------------
-shared_ids <- intersect(data_tidy$code, toupper(bsi_data$code))
+shared_ids <- intersect(data_tidy$code, bsi_data$code)
+bsi_missing_cases <- setdiff(data_tidy$code, bsi_data$code)
 
-# this was necessary to pivot longer both for setting and timepoints
-# bsi_data_tidy <- bsi_data %>%
-#   select(code, contains(c("_tk_d","_de_kiz"))) %>%
-#   select(-matches("katamnese|katamese")) %>%
-#   mutate(code = toupper(code)) %>%
-#   filter(code %in% data_tidy$code) %>%
-#   mutate(across(where(is.character), ~ if_else(. == "", NA, .))) %>%
-#   rename_with(~ gsub(
-#     pattern = "^(.*?)(aufnahme|verlaufsmessung|abschlussmessung)_(tk_d|de_kiz)$", # Regex pattern
-#     replacement = "\\1.\\3.\\2", # Replace with "base.setting.timepoint"
-#     .x
-#   )) %>%
-#   pivot_longer(
-#     cols = -code, # Pivot all columns
-#     names_to = c(".value", "setting", "timepoint"), # Separate into base, setting, and timepoint
-#     names_sep = "\\." # Use "." as the separator
-#   ) %>%
-#   mutate(setting = str_replace_all(setting, "de_kiz", "dekiz")) %>%
-# # filtering
-#     filter((str_detect(code, "DK") & setting == "dekiz") |
-#              (str_detect(code, "^[0-9]+$") & setting == "tk_d"))
-
+# pivot BSI data to longer format
 bsi_data_tidy <- bsi_data %>%
   rename_with(~ gsub(
     pattern = "^(.*?)(aufnahme|verlaufsmessung|abschlussmessung)$",
@@ -199,12 +179,46 @@ bsi_data_tidy <- bsi_data %>%
                names_to = c(".value", "timepoint"),
                names_sep = "_")
 
-# 8. export   ------------------------------------------------------------------
+# relabel BSI data
+bsi_labels <- filter(var_key_tidy, str_detect(var_name, "bsi")) %>%
+  mutate(var_name = str_replace_all(var_name, "bsi", "b18")) %>%
+  filter(var_name %in% colnames(bsi_data_tidy))
+
+labelled::var_label(bsi_data_tidy) <- setNames(as.list(bsi_labels$label),
+                                           bsi_labels$var_name)
+
+# merge new BSI data to dataset
+# old bsi columns start with "bsi", new ones with "b18"
+data_tidy <- left_join(data_tidy, bsi_data_tidy,
+                       by = c("setting", "code", "timepoint"))
+
+
+# 8. update bas and ddt variables ----------------------------------------------
+# setdiff(colnames(badok), colnames(data_tidy))
+bas_ddt_vars <- badok %>%
+  select(-c(code, setting, timepoint)) %>%
+  colnames()
+
+num_cols <- c("ddt001", "ddt009", "ddt018", "ddt019", "ddt020", "ddt021",
+              "ddt024", "ddt025")
+
+data_tidy_updated <- data_tidy %>%
+  select(-all_of(bas_ddt_vars)) %>%
+  left_join(badok, by = c("setting", "code", "timepoint")) %>%
+  mutate(across(all_of(num_cols), as.numeric)) %>%
+  select(all_of(names(data_tidy)))
+
+# relabel
+labelled::var_label(data_tidy_updated) <- setNames(as.list(var_key_tidy$label),
+                                           var_key_tidy$var_name)
+
+
+# 9. export   ------------------------------------------------------------------
 
 if (save_output) {
 
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))
-  write.xlsx(data_tidy, here("data", "processed", "data_tidy.xlsx"))
+  write.xlsx(data_tidy, here("data", "processed", "data_tidy_updated.xlsx"))
 
 }
 
