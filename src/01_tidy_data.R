@@ -206,13 +206,26 @@ data_tidy_updated <- data_tidy %>%
   select(-all_of(bas_ddt_vars)) %>%
   left_join(badok, by = c("setting", "code", "timepoint")) %>%
   mutate(across(all_of(num_cols), as.numeric)) %>%
-  select(all_of(names(data_tidy)))
+  select(all_of(names(data_tidy))) %>%
+  # remove bsi cols before output
+  select(-contains("bsi"))
+
+# remove old bsi cols from var_key
+var_key_tidy <- filter(var_key_tidy, str_detect(var_name, "bsi", negate = TRUE))
 
 # relabel
 labelled::var_label(data_tidy_updated) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
+# 9. fix factors ---------------------------------------------------------------
+item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
 
+# inspect factors
+  factor_levels_list <- map(item_names, ~ {
+    # Convert the column to a factor (if not already) and get the levels
+    levels(as.factor(data_tidy_updated[[.x]]))
+  }) %>%
+    set_names(item_names)
 
 # 9. export   ------------------------------------------------------------------
 
