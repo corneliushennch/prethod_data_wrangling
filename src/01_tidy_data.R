@@ -232,7 +232,7 @@ item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
 if (save_output) {
 
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))
-  write.xlsx(data_tidy_updated, here("data", "processed", "data_tidy_updated.xlsx"))
+  write.xlsx(data_tidy_updated, here("output", "tables", "data_tidy_updated.xlsx"))
 
 }
 
