@@ -210,12 +210,19 @@ data_tidy_updated <- data_tidy %>%
   # remove bsi cols before output
   select(-contains("bsi"))
 
-# remove old bsi cols from var_key
-var_key_tidy <- filter(var_key_tidy, str_detect(var_name, "bsi", negate = TRUE))
+# rename old bsi cols in var_key
+var_key_tidy <- var_key_tidy %>%
+  mutate(var_name = str_replace_all(var_name, "bsi", "b18")) %>%
+  filter(var_name %in% names(data_tidy_updated))
+
+# reorder
+data_tidy_updated <- select(data_tidy_updated, all_of(var_key_tidy$var_name))
+
 
 # relabel
 labelled::var_label(data_tidy_updated) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
+
 
 # 9. fix factors ---------------------------------------------------------------
 item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
@@ -231,7 +238,7 @@ item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
 
 if (save_output) {
 # xlsx
-  write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))
+  write.xlsx(var_key_tidy, here("output", "tables", "variable_key_bsi_old.xlsx"))
   write.xlsx(data_tidy_updated, here("output", "tables", "data_tidy_updated.xlsx"))
 
   # csv
