@@ -230,10 +230,13 @@ item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
 # 9. export   ------------------------------------------------------------------
 
 if (save_output) {
-
+# xlsx
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_tidy.xlsx"))
   write.xlsx(data_tidy_updated, here("output", "tables", "data_tidy_updated.xlsx"))
 
+  # csv
+  write_csv2(var_key_tidy, here("output", "tables", "variable_key_tidy.csv"))
+  write_csv2(data_tidy_updated, here("output", "tables", "prethod_data.csv"))
 }
 
 
