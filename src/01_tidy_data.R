@@ -115,22 +115,23 @@ data_tidy <- data_tidy %>%
 
 # 4. variable wrangling    -----------------------------------------------------
 ## 4.1 DDT categories     ------------------------------------------------------
+# collapse DDT variable categories -> maybe later in the analysis
 # -> move to different script
-ddt_vars <- c("ddt015", "ddt016", "ddt017", "ddt023")
-ddt_levels <- c("0", "1", "2", "3", "4", "5", "> 5")
-
-# data_tidy %>% select(all_of(ddt_vars)) %>% View()
-
-# collapse DDT variable categories
-data_tidy <- data_tidy %>%
-  mutate(across(all_of(ddt_vars), round),
-         across(all_of(ddt_vars), ~ if_else(. > 5, "> 5", as.character(.))),
-         across(all_of(ddt_vars), ~ factor(., levels = ddt_levels))) %>%
-  # order of timepoints
-  mutate(timepoint = factor(
-    timepoint,
-    levels = c("aufnahme", "verlaufsmessung", "abschlussmessung")
-  ))
+# ddt_vars <- c("ddt015", "ddt016", "ddt017", "ddt023")
+# ddt_levels <- c("0", "1", "2", "3", "4", "5", "> 5")
+#
+# # data_tidy %>% select(all_of(ddt_vars)) %>% View()
+#
+# # collapse DDT variable categories -> maybe later in the analysis
+# data_tidy <- data_tidy %>%
+#   mutate(across(all_of(ddt_vars), round),
+#          across(all_of(ddt_vars), ~ if_else(. > 5, "> 5", as.character(.))),
+#          across(all_of(ddt_vars), ~ factor(., levels = ddt_levels))) %>%
+#   # order of timepoints
+#   mutate(timepoint = factor(
+#     timepoint,
+#     levels = c("aufnahme", "verlaufsmessung", "abschlussmessung")
+#   ))
 
 
 # 5. re-label tidy variable key ------------------------------------------------
@@ -202,13 +203,34 @@ bas_ddt_vars <- badok %>%
 num_cols <- c("ddt001", "ddt009", "ddt018", "ddt019", "ddt020", "ddt021",
               "ddt024", "ddt025")
 
+# colnames of cols that were collapsed from numeric to categorical
+collapsed_cols <- badok %>%
+  select(where(is.character)) %>%
+  select(where(~ any(. == "> 5", na.rm = TRUE))) %>%
+  colnames()
+
+data_num <- data_tidy %>%
+  select(c(code, setting, timepoint, all_of(collapsed_cols))) %>%
+  filter(timepoint == "aufnahme") %>%
+  filter(code %in% badok$code)
+
+# get numerical values back
+badok <- badok %>%
+  mutate(across(all_of(collapsed_cols), ~ ifelse(. == "> 5", data_num[[cur_column()]], .)))
+
+# test 1 -> "> 5"
+badok %>%
+  select(where(is.character)) %>%
+  select(where(~ any(. == "> 5", na.rm = TRUE))) %>%
+  colnames()
+
+# update data
 data_tidy_updated <- data_tidy %>%
   select(-all_of(bas_ddt_vars)) %>%
   left_join(badok, by = c("setting", "code", "timepoint")) %>%
   mutate(across(all_of(num_cols), as.numeric)) %>%
-  select(all_of(names(data_tidy))) %>%
-  # remove bsi cols before output
-  select(-contains("bsi"))
+  select(all_of(names(data_tidy)))
+
 
 # rename old bsi cols in var_key
 var_key_tidy <- var_key_tidy %>%
@@ -216,13 +238,22 @@ var_key_tidy <- var_key_tidy %>%
   filter(var_name %in% names(data_tidy_updated))
 
 # reorder
-data_tidy_updated <- select(data_tidy_updated, all_of(var_key_tidy$var_name))
+data_tidy_updated <- select(data_tidy_updated, all_of(var_key_tidy$var_name)) %>%
+  select(c(code, setting, timepoint, everything()))
 
 
 # relabel
 labelled::var_label(data_tidy_updated) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
+# check variable class
+col_classes <- data_tidy_updated %>%
+  map(~ class(.x)) %>% stack() %>%
+  rename(var_name = "ind") %>%
+  left_join(var_key_tidy, by = "var_name")
+
+# reorder var_key
+var_key_tidy <- var_key_tidy[order(match(var_key_tidy$var_name, colnames(data_tidy_updated))), ]
 
 # 9. fix factors ---------------------------------------------------------------
 item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
@@ -233,6 +264,7 @@ item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
     levels(as.factor(data_tidy_updated[[.x]]))
   }) %>%
     set_names(item_names)
+
 
 # 9. export   ------------------------------------------------------------------
 
