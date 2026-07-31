@@ -24,7 +24,7 @@
 # select the columns that contain the data source name
 data_split <- map(
   c("tk_d", "de_kiz"),
-  ~ select(raw_data, code, all_of(contains(.x)))
+  ~ select(raw_data_26, code, all_of(contains(.x))) #raw_data
 ) %>%
   # replace empty strings with NA
   map(~ mutate(.x, across(where(is.character), ~ if_else(. == "", NA, .)))) %>%
@@ -46,10 +46,10 @@ data_clean <- bind_rows(data_split, .id = "var_setting") %>%
   filter(!str_detect(code, "TEST")) %>%
   # add setting variable (from ID col)
   mutate(setting = if_else(str_detect(code, "DK"), "dekiz", "tk_d"),
-         .before = "var_setting") %>%
+         .before = "var_setting")  %>%
   select(-var_setting)
 
-# data_clean %>% filter(id_setting != var_setting) %>% glimpse()
+# data_clean %>% filter(setting != var_setting) %>% glimpse()
 
 ## 1.2.pivot longer and take out timepoints from variable names ----------------
 data_tidy <- data_clean %>%
@@ -68,52 +68,30 @@ data_tidy <- data_clean %>%
     names_sep = "_"
   ) %>%
   # remove duplicates
-  distinct(code, timepoint, .keep_all = TRUE)
-
+  distinct(code, timepoint, .keep_all = TRUE) %>%
+  # drop all columns containing only NA
+  select(where(~ !all(is.na(.))))
 
 # data_tidy %>% select(code, setting, timepoint, contains("bd2")) %>% view()
 
-# 2. check missings bd2sum -----------------------------------------------------
 
-# data_tidy %>%
-#   select(code, id_setting, timepoint, contains("bd2")) %>%
-#   filter(timepoint %in% c("aufnahme","verlaufsmessung","abschlussmessung") & !is.na(bd2sum)) %>%
-#   View()
-
-# bdi sum admission = 699
-# bdi sum course = 510
-# bdi sum discharge = 483
-data_tidy %>%
-  group_by(timepoint) %>%
-  summarize(na_count = sum(is.na(bd2sum))) %>%
-  mutate(bd2sum_value = 727 - na_count)
+# 2. filter for complete cases -------------------------------------------------
+# bdi sum admission and discharge n = 467
 
 # into wide format for counting
 wide <- data_tidy %>%
   select(code, timepoint, bd2sum) %>%
   pivot_wider(names_from = timepoint, values_from = bd2sum)
 
-# bdi sum all three = 385
-wide %>%
-  filter(!is.na(aufnahme) & !is.na(verlaufsmessung) & !is.na(abschlussmessung)) %>%
-  nrow()
-
-# bdi sum admission + discharge = 467
-wide %>%
-  filter(!is.na(aufnahme) & !is.na(abschlussmessung)) %>%
-  nrow()
-
+# ids of patients with complete cases for admission and discharge
 complete_cases <- wide %>%
   filter(!is.na(aufnahme) & !is.na(abschlussmessung)) %>%
   pull(code)
 
-# 3. filter for complete cases -------------------------------------------------
-# bdi sum admission and discharge n = 467
+# data_tidy <- data_tidy %>%
+#   filter(code %in% complete_cases)
 
-data_tidy <- data_tidy %>%
-  filter(code %in% complete_cases)
-
-# 4. variable wrangling    -----------------------------------------------------
+# 3. variable wrangling    -----------------------------------------------------
 ## 4.1 DDT categories     ------------------------------------------------------
 # collapse DDT variable categories -> maybe later in the analysis
 # -> move to different script
@@ -134,7 +112,7 @@ data_tidy <- data_tidy %>%
 #   ))
 
 
-# 5. re-label tidy variable key ------------------------------------------------
+# 4. re-label tidy variable key ------------------------------------------------
 var_key_tidy <- var_key %>%
   mutate(
     var_name =
@@ -147,11 +125,12 @@ var_key_tidy <- var_key %>%
   )  %>%
   distinct(var_name, .keep_all = TRUE) %>%
   add_row(var_name = "setting", label = "setting") %>%
-  add_row(var_name = "timepoint", label = "timepoint")
+  add_row(var_name = "timepoint", label = "timepoint") %>%
+  filter(var_name %in% colnames(data_tidy))
 
 # setdiff(colnames(data_tidy), var_key_tidy$var_name)
 
-# 6. relabel basisdoku timepoint -----------------------------------------------
+# 5. relabel basisdoku timepoint -----------------------------------------------
 bas_vars <- names(data_tidy) %>% str_subset("^bas")
 
 # Shift "abschluss" values of bas* to "aufnahme" within each id
@@ -167,104 +146,104 @@ data_tidy <- data_tidy %>%
 labelled::var_label(data_tidy) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
 
-# 7. tidy and add BSI-18 data --------------------------------------------------
-shared_ids <- intersect(data_tidy$code, bsi_data$code)
-bsi_missing_cases <- setdiff(data_tidy$code, bsi_data$code)
+# 6. tidy and add BSI-18 data --------------------------------------------------
+# shared_ids <- intersect(data_tidy$code, bsi_data$code)
+# bsi_missing_cases <- setdiff(data_tidy$code, bsi_data$code)
+#
+# # pivot BSI data to longer format
+# bsi_data_tidy <- bsi_data %>%
+#   rename_with(~ gsub(
+#     pattern = "^(.*?)(aufnahme|verlaufsmessung|abschlussmessung)$",
+#     replacement = "\\1_\\2", .x), !contains("_")) %>%
+#   pivot_longer(cols = -c(code, setting),
+#                names_to = c(".value", "timepoint"),
+#                names_sep = "_")
+#
+# # relabel BSI data
+# bsi_labels <- filter(var_key_tidy, str_detect(var_name, "bsi")) %>%
+#   mutate(var_name = str_replace_all(var_name, "bsi", "b18")) %>%
+#   filter(var_name %in% colnames(bsi_data_tidy))
+#
+# labelled::var_label(bsi_data_tidy) <- setNames(as.list(bsi_labels$label),
+#                                            bsi_labels$var_name)
+#
+# # merge new BSI data to dataset
+# # old bsi columns start with "bsi", new ones with "b18"
+# data_tidy <- left_join(data_tidy, bsi_data_tidy,
+#                        by = c("setting", "code", "timepoint"))
 
-# pivot BSI data to longer format
-bsi_data_tidy <- bsi_data %>%
-  rename_with(~ gsub(
-    pattern = "^(.*?)(aufnahme|verlaufsmessung|abschlussmessung)$",
-    replacement = "\\1_\\2", .x), !contains("_")) %>%
-  pivot_longer(cols = -c(code, setting),
-               names_to = c(".value", "timepoint"),
-               names_sep = "_")
 
-# relabel BSI data
-bsi_labels <- filter(var_key_tidy, str_detect(var_name, "bsi")) %>%
-  mutate(var_name = str_replace_all(var_name, "bsi", "b18")) %>%
-  filter(var_name %in% colnames(bsi_data_tidy))
-
-labelled::var_label(bsi_data_tidy) <- setNames(as.list(bsi_labels$label),
-                                           bsi_labels$var_name)
-
-# merge new BSI data to dataset
-# old bsi columns start with "bsi", new ones with "b18"
-data_tidy <- left_join(data_tidy, bsi_data_tidy,
-                       by = c("setting", "code", "timepoint"))
-
-
-# 8. update bas and ddt variables ----------------------------------------------
+# 7. update bas and ddt variables ----------------------------------------------
 # setdiff(colnames(badok), colnames(data_tidy))
-bas_ddt_vars <- badok %>%
-  select(-c(code, setting, timepoint)) %>%
-  colnames()
+# bas_ddt_vars <- badok %>%
+#   select(-c(code, setting, timepoint)) %>%
+#   colnames()
+#
+# num_cols <- c("ddt001", "ddt009", "ddt018", "ddt019", "ddt020", "ddt021",
+#               "ddt024", "ddt025")
+#
+# # colnames of cols that were collapsed from numeric to categorical
+# collapsed_cols <- badok %>%
+#   select(where(is.character)) %>%
+#   select(where(~ any(. == "> 5", na.rm = TRUE))) %>%
+#   colnames()
+#
+# data_num <- data_tidy %>%
+#   select(c(code, setting, timepoint, all_of(collapsed_cols))) %>%
+#   filter(timepoint == "aufnahme") %>%
+#   filter(code %in% badok$code)
+#
+# # get numerical values back
+# badok <- badok %>%
+#   mutate(across(all_of(collapsed_cols), ~ ifelse(. == "> 5", data_num[[cur_column()]], .)))
+#
+# # test 1 -> "> 5"
+# badok %>%
+#   select(where(is.character)) %>%
+#   select(where(~ any(. == "> 5", na.rm = TRUE))) %>%
+#   colnames()
+#
+# # update data
+# data_tidy_updated <- data_tidy %>%
+#   select(-all_of(bas_ddt_vars)) %>%
+#   left_join(badok, by = c("setting", "code", "timepoint")) %>%
+#   mutate(across(all_of(num_cols), as.numeric)) %>%
+#   select(all_of(names(data_tidy)))
+#
+#
+# # rename old bsi cols in var_key
+# var_key_tidy <- var_key_tidy %>%
+#   mutate(var_name = str_replace_all(var_name, "bsi", "b18")) %>%
+#   filter(var_name %in% names(data_tidy_updated))
+#
+# # reorder
+# data_tidy_updated <- select(data_tidy_updated, all_of(var_key_tidy$var_name)) %>%
+#   select(c(code, setting, timepoint, everything()))
+#
+#
+# # relabel
+# labelled::var_label(data_tidy_updated) <- setNames(as.list(var_key_tidy$label),
+#                                            var_key_tidy$var_name)
+#
+# # check variable class
+# col_classes <- data_tidy_updated %>%
+#   map(~ class(.x)) %>% stack() %>%
+#   rename(var_name = "ind") %>%
+#   left_join(var_key_tidy, by = "var_name")
+#
+# # reorder var_key
+# var_key_tidy <- var_key_tidy[order(match(var_key_tidy$var_name, colnames(data_tidy_updated))), ]
 
-num_cols <- c("ddt001", "ddt009", "ddt018", "ddt019", "ddt020", "ddt021",
-              "ddt024", "ddt025")
-
-# colnames of cols that were collapsed from numeric to categorical
-collapsed_cols <- badok %>%
-  select(where(is.character)) %>%
-  select(where(~ any(. == "> 5", na.rm = TRUE))) %>%
-  colnames()
-
-data_num <- data_tidy %>%
-  select(c(code, setting, timepoint, all_of(collapsed_cols))) %>%
-  filter(timepoint == "aufnahme") %>%
-  filter(code %in% badok$code)
-
-# get numerical values back
-badok <- badok %>%
-  mutate(across(all_of(collapsed_cols), ~ ifelse(. == "> 5", data_num[[cur_column()]], .)))
-
-# test 1 -> "> 5"
-badok %>%
-  select(where(is.character)) %>%
-  select(where(~ any(. == "> 5", na.rm = TRUE))) %>%
-  colnames()
-
-# update data
-data_tidy_updated <- data_tidy %>%
-  select(-all_of(bas_ddt_vars)) %>%
-  left_join(badok, by = c("setting", "code", "timepoint")) %>%
-  mutate(across(all_of(num_cols), as.numeric)) %>%
-  select(all_of(names(data_tidy)))
-
-
-# rename old bsi cols in var_key
-var_key_tidy <- var_key_tidy %>%
-  mutate(var_name = str_replace_all(var_name, "bsi", "b18")) %>%
-  filter(var_name %in% names(data_tidy_updated))
-
-# reorder
-data_tidy_updated <- select(data_tidy_updated, all_of(var_key_tidy$var_name)) %>%
-  select(c(code, setting, timepoint, everything()))
-
-
-# relabel
-labelled::var_label(data_tidy_updated) <- setNames(as.list(var_key_tidy$label),
-                                           var_key_tidy$var_name)
-
-# check variable class
-col_classes <- data_tidy_updated %>%
-  map(~ class(.x)) %>% stack() %>%
-  rename(var_name = "ind") %>%
-  left_join(var_key_tidy, by = "var_name")
-
-# reorder var_key
-var_key_tidy <- var_key_tidy[order(match(var_key_tidy$var_name, colnames(data_tidy_updated))), ]
-
-# 9. fix factors ---------------------------------------------------------------
-item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
-
-# inspect factors
-  factor_levels_list <- map(item_names, ~ {
-    # Convert the column to a factor (if not already) and get the levels
-    levels(as.factor(data_tidy_updated[[.x]]))
-  }) %>%
-    set_names(item_names)
-
+# 8. fix factors ---------------------------------------------------------------
+# item_names <- data_tidy_updated %>% select(matches("\\d$")) %>% colnames()
+#
+# # inspect factors
+#   factor_levels_list <- map(item_names, ~ {
+#     # Convert the column to a factor (if not already) and get the levels
+#     levels(as.factor(data_tidy_updated[[.x]]))
+#   }) %>%
+#     set_names(item_names)
+#
 
 # 9. export   ------------------------------------------------------------------
 

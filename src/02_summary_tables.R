@@ -11,7 +11,55 @@
 # Code written according to Hadley Wickhams "tidyverse style guide"
 # Header end ===================================================================
 
-# 1. summary of BAS with missings ----------------------------------------------
+
+# 1. missings summary ----------------------------------------------------------
+missing_summary <- data_tidy %>%
+  group_by(setting, timepoint) %>%
+  # count NAs for each variable
+  summarise(across(everything(), ~ sum(is.na(.)))) %>%
+  select(-code) %>%
+  select(setting, timepoint, ends_with("dat")) %>%
+  # pivot longer
+  pivot_longer(cols = -c(setting, timepoint),
+               names_to = "variable",
+               values_to = "missing_count") %>%
+  pivot_wider(names_from = timepoint, values_from = missing_count) %>%
+  select(setting, variable, aufnahme, verlaufsmessung, abschlussmessung)
+
+# calculate total cases per setting
+total_cases <- data_tidy %>% group_by(setting) %>%
+  distinct(code) %>% count()
+
+# missing percentages per setting
+missing_percentages <- missing_summary %>%
+  left_join(total_cases, by = "setting") %>%
+  mutate(across(c(aufnahme, verlaufsmessung, abschlussmessung),
+                ~ (.x / n) * 100))
+
+data_percentages <- missing_percentages %>%
+  # subtract 100 from percentages to get the percentage of available data
+  mutate(across(c(aufnahme, verlaufsmessung, abschlussmessung),
+                ~ 100 - .x))
+
+# export as .xlsx with three worksheets
+if (save_output) {
+  # bind in a named list
+  data_summaries <- lst(missing_summary, missing_percentages, data_percentages)
+  # create a new workbook
+  wb <- createWorkbook()
+  # add worksheets and write data
+  walk2(names(data_summaries), data_summaries, ~ {
+    addWorksheet(wb, .x)
+    writeData(wb, .x, .y)
+  })
+
+  # save workbook
+  saveWorkbook(wb, here("output", "tables", glue("{today}_missing_summary.xlsx")), overwrite = TRUE)
+
+}
+
+
+# 2. summary of BAS with missings ----------------------------------------------
 
 # vars to include
 summary_vars <- colnames(data_tidy) %>% str_subset("ddt[:digit:]")
@@ -35,4 +83,5 @@ if (save_output) {
   table_one %>%
     as_hux_xlsx(here("output", "tables", glue("{today}_summary_table.xlsx")))
 }
+
 

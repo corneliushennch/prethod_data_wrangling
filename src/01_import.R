@@ -19,6 +19,13 @@ raw_data <- haven::read_sav(here("data", "raw", "psychoEQExport_2.8.2024_8.5.sav
   select(!contains("PRN")) %>%
   clean_names()
 
+raw_data_26 <- haven::read_sav(here("data", "raw", "20260731_psychoEQExport.sav")) %>%
+  haven::as_factor() %>%
+  select(!contains("PRN")) %>%
+  clean_names() %>%
+  # remove BSI columns (deprecated)
+  select(-starts_with("bsi"))
+
 ## 1.1 import identifiers ------------------------------------------------------
 
 
@@ -81,7 +88,7 @@ data_20_24 <- readr::read_csv2(here("data", "processed",
 # 2. examine variable labels ---------------------------------------------------
 
 # variable key for overview
-var_key <- labelled::var_label(raw_data) %>%
+var_key <- labelled::var_label(raw_data_26) %>%
   as.data.frame() %>%
   pivot_longer(everything(), names_to = "var_name", values_to = "label")
 
