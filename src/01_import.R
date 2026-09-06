@@ -26,6 +26,9 @@ raw_data_26 <- haven::read_sav(here("data", "raw", "20260731_psychoEQExport.sav"
   # remove BSI columns (deprecated)
   select(-starts_with("bsi"))
 
+
+# raw_data_26$bas007abschlussmessung_tk_d %>% levels()
+
 ## 1.1 import identifiers ------------------------------------------------------
 
 
@@ -73,15 +76,57 @@ bsi_data <- bind_rows(bsi_dekiz, bsi_tk, .id = "setting") %>%
          setting = if_else(str_detect(code, "DK"), "dekiz", "tk_d"))
 
 # 1.3 import new bas data ------------------------------------------------------
-badok <- readxl::read_excel(here("data", "processed",
-                                 "missing_basisdoku_curated.xlsx"),
+# 2020 - 2024
+badok_24 <- readxl::read_excel(here("data", "processed",
+                                 "2024_missing_basisdoku_curated.xlsx"),
                             sheet = 1,
                             na = "NA",
                             guess_max = 1600)
 
+# 2024 - 2026
+badok_26 <- readxl::read_excel(here("data", "processed",
+                                    "2026_missing_basisdoku_weber.xlsx"),
+                               sheet = 1,
+                               na = "NA",
+                               guess_max = 1600)
+
+# check if column names are equal
+if (!identical(colnames(badok_24), colnames(badok_26))) {
+  stop("Column names of badok_24 and badok_26 are not identical")
+}else{
+  message("Column names of badok_24 and badok_26 are identical")
+}
+
+# check for duplicates comparing code of each data frame
+badok_duplicates <- intersect(badok_24$code, badok_26$code)
+
+# filter the duplicates out of badok_26 (those are already in badok_24 with more
+# complete data)
+badok_26 <- badok_26 %>% filter(!code %in% badok_duplicates)
+
+# colnames of cols that were collapsed from numeric to categorical
+collapsed_cols <- badok_24 %>%
+  select(where(is.character)) %>%
+  select(where(~ any(. == "> 5", na.rm = TRUE))) %>%
+  colnames()
+
+# convert collapsed_cols to character
+badok_26 <- badok_26 %>%
+ mutate(across(all_of(collapsed_cols), as.character))
+
+# bind together
+badok <- bind_rows(badok_24, badok_26)
+
+# last check for duplicates
+if (any(duplicated(badok$code))) {
+  stop("There are duplicates in the combined badok data frame")
+}else{
+  message("No duplicates in the combined badok data frame")
+}
+
 # 1.4 import clean data (2020 - 2024) ------------------------------------------
-data_20_24 <- readr::read_csv2(here("data", "processed",
-                                 "20_24_prethod_data.csv"),
+data_2024 <- readr::read_csv2(here("data", "processed",
+                                 "2024_prethod_data.csv"),
                             show_col_types = FALSE)
 
 
