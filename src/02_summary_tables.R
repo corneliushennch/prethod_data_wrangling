@@ -13,21 +13,21 @@
 
 
 # 1. missings summary ----------------------------------------------------------
-missing_summary <- data_tidy %>%
-  group_by(setting, timepoint) %>%
+missing_summary <- data_tidy_2026 %>%
+  group_by(source, setting, timepoint) %>%
   # count NAs for each variable
   summarise(across(everything(), ~ sum(is.na(.)))) %>%
   select(-code) %>%
-  select(setting, timepoint, ends_with("dat")) %>%
+  select(source, setting, timepoint, ends_with("dat")) %>%
   # pivot longer
-  pivot_longer(cols = -c(setting, timepoint),
+  pivot_longer(cols = -c(source, setting, timepoint),
                names_to = "variable",
                values_to = "missing_count") %>%
   pivot_wider(names_from = timepoint, values_from = missing_count) %>%
-  select(setting, variable, aufnahme, verlaufsmessung, abschlussmessung)
+  select(source, setting, variable, aufnahme, verlaufsmessung, abschlussmessung)
 
 # calculate total cases per setting
-total_cases <- data_tidy %>% group_by(setting) %>%
+total_cases <- data_tidy_2026 %>% group_by(setting) %>%
   distinct(code) %>% count()
 
 # missing percentages per setting

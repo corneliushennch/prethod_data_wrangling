@@ -13,12 +13,13 @@
 
 
 # 1. import SPSS file ----------------------------------------------------------
-
-raw_data <- haven::read_sav(here("data", "raw", "psychoEQExport_2.8.2024_8.5.sav")) %>%
+# 2020 - 2024
+raw_data_24 <- haven::read_sav(here("data", "raw", "psychoEQExport_2.8.2024_8.5.sav")) %>%
   haven::as_factor() %>%
   select(!contains("PRN")) %>%
   clean_names()
 
+# 2024 - 2026
 raw_data_26 <- haven::read_sav(here("data", "raw", "20260731_psychoEQExport.sav")) %>%
   haven::as_factor() %>%
   select(!contains("PRN")) %>%
@@ -26,6 +27,22 @@ raw_data_26 <- haven::read_sav(here("data", "raw", "20260731_psychoEQExport.sav"
   # remove BSI columns (deprecated)
   select(-starts_with("bsi"))
 
+intersect(colnames(raw_data_24), colnames(raw_data_26)) %>% length()
+
+# select columns in raw_data_2024 that are present in raw_data_26
+raw_data_24 <- raw_data_24 %>%
+  select(any_of(colnames(raw_data_26)))
+
+
+# check if column names are equal
+# if (!identical(colnames(raw_data_2024), colnames(raw_data_26)))
+# {stop("Column names of raw_data_2024 and raw_data_26 are not identical")
+# }else{
+#   message("Column names of raw_data_2024 and raw_data_26 are identical")
+# }
+
+# merge raw data for further processing
+# raw_data <- bind_rows(raw_data_2024, raw_data_26)
 
 # raw_data_26$bas007abschlussmessung_tk_d %>% levels()
 
@@ -125,10 +142,10 @@ if (any(duplicated(badok$code))) {
 }
 
 # 1.4 import clean data (2020 - 2024) ------------------------------------------
+# this data was already filtered for complete cases (bdi2 score at admission and discharge present)
 data_2024 <- readr::read_csv2(here("data", "processed",
                                  "2024_prethod_data.csv"),
                             show_col_types = FALSE)
-
 
 # 2. examine variable labels ---------------------------------------------------
 

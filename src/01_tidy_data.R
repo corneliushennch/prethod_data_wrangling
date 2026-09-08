@@ -97,6 +97,7 @@ complete_cases <- wide %>%
   filter(!is.na(aufnahme) & !is.na(abschlussmessung)) %>%
   pull(code)
 
+# this is not necessary anymore, because we want to keep all cases for the analysis
 # data_tidy <- data_tidy %>%
 #   filter(code %in% complete_cases)
 
@@ -190,6 +191,8 @@ col_classes <- data_tidy_updated %>%
 var_key_tidy <- var_key_tidy[order(match(var_key_tidy$var_name, colnames(data_tidy_updated))), ]
 
 # 6. add 2026 data to 2024 data set --------------------------------------------
+# TODO: rather replace the cases in the complete dataset with the 2024 cases
+# (which have been edited manually)
 ## 6.1 harmonize columns -------------------------------------------------------
 # check if all columns are equal
 # if (!identical(colnames(data_tidy_updated), colnames(data_2024))) {
@@ -245,37 +248,45 @@ numeric_cols <- c("ddt015", "ddt016", "ddt017", "ddt023")
 data_tidy_updated <- data_tidy_updated %>%
   mutate(across(all_of(numeric_cols), as.numeric))
 
-data_2024 <- data_2024 %>%
-  mutate(across(all_of(c("bas015")), as.numeric))
-
-
 # 6.3 harmonize IDs ------------------------------------------------------------
 
 # bind data frames together
-data_tidy_2026 <- bind_rows(data_2024, data_tidy_updated)
+data_tidy_2026 <- bind_rows(data_2024, data_tidy_updated, .id = "source") %>%
+  mutate(source = if_else(source == "1", "2024", "2026"))
 
 # check for overlapping ID codes
 overlapping_ids <- intersect(data_tidy_updated$code, data_2024$code)
 
-
-data_tidy_updated$bas015 %>% unique()
-
-data_2024$bas015 %>% unique()
-
 # view overlapping data
-overlap <- data_tidy_updated %>%
+overlap <- data_tidy_2026 %>%
   filter(code %in% overlapping_ids)
+
+# discard duplicates originating from 2026 data set
+data_tidy_2026 <- data_tidy_2026 %>%
+  filter(!(source == "2026" & code %in% overlapping_ids))
+
+# recheck for duplicates -> no rows removed by distinct()
+# data_tidy_2026 %>%
+#   filter(timepoint == "aufnahme") %>%
+#   distinct(code, .keep_all = TRUE)
+
+# order by code and timepoint
+data_tidy_2026 <- data_tidy_2026 %>%
+  mutate(code = factor(code, levels = str_sort(unique(code), numeric = TRUE))) %>%
+  arrange(code, timepoint)
+
+data_tidy_2026$code %>% str_sort(numeric = TRUE)
 
 # 9. export   ------------------------------------------------------------------
 
 if (save_output) {
 # xlsx
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_bsi_old.xlsx"))
-  write.xlsx(data_tidy_updated, here("output", "tables", "data_tidy_updated.xlsx"))
+  write.xlsx(data_tidy_2026, here("output", "tables", "data_tidy_2026_v1.xlsx"))
 
   # csv
   write_csv2(var_key_tidy, here("output", "tables", "variable_key_tidy.csv"))
-  write_csv2(data_tidy_updated, here("output", "tables", "prethod_data.csv"))
+  write_csv2(data_tidy_2026, here("output", "tables", "data_tidy_2026_v1.csv"))
 }
 
 
