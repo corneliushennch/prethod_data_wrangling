@@ -117,4 +117,92 @@
 #     levels(as.factor(data_tidy_updated[[.x]]))
 #   }) %>%
 #     set_names(item_names)
+
+# 6. add 2026 data to 2024 data set --------------------------------------------
+# TODO: rather replace the cases in the complete dataset with the 2024 cases
+# (which have been edited manually) -> done thus the following code is deprecated
+## 6.1 harmonize columns -------------------------------------------------------
+# check if all columns are equal
+# if (!identical(colnames(data_tidy_updated), colnames(data_2024))) {
+#   stop("Column names of data_tidy_updated and data_2024 are not identical")
+# }else{
+#   message("Column names of data_tidy_updated and data_2024 are identical")
+# }
+
+# identify missing columns (not present in data_2024 but present in data_tidy_updated)
+missing_cols <- setdiff(colnames(data_tidy_updated), colnames(data_2024))
+
+# setdiff(colnames(data_2024), colnames(data_tidy_updated))
+
+# remove "bas007" from missing cols
+missing_cols <- missing_cols[!missing_cols %in% "bas007"]
+
+# remove missing columns from data_tidy_updated
+data_tidy_updated <- data_tidy_updated %>%
+  select(-all_of(missing_cols))
+
+# add "bas007" to data_2024 with values from data_tidy_updated
+data_2024 <- data_2024 %>%
+  mutate(bas007 = data_tidy_updated$bas007[match(data_2024$code, data_tidy_updated$code)]) %>%
+  # move after "bas006"
+  relocate(bas007, .after = bas006)
+
+# check if all columns are equal now
+if (!identical(colnames(data_tidy_updated), colnames(data_2024))) {
+  stop("Column names of data_tidy_updated and data_2024 are not identical after
+ harmonization")
+}else{
+  message("Column names of data_tidy_updated and data_2024 are identical after
+ harmonization")
+}
+
+# 6.2 harmonize variable classes -----------------------------------------------
+# get all factor cols
+factor_cols <- data_tidy_updated %>%
+  select(where(is.factor)) %>%
+  colnames()
+
+# convert to factor
+data_2024 <- data_2024 %>%
+  mutate(across(all_of(factor_cols), as.factor))
+
+# convert to date
+data_2024 <- data_2024 %>%
+  mutate(bd2dat = as.Date(bd2dat, format = "%d.%m.%y"))
+
+# convert to numeric
+numeric_cols <- c("ddt015", "ddt016", "ddt017", "ddt023")
+
+data_tidy_updated <- data_tidy_updated %>%
+  mutate(across(all_of(numeric_cols), as.numeric))
+
+# 6.3 harmonize IDs ------------------------------------------------------------
+
+# bind data frames together
+data_tidy_2026 <- bind_rows(data_2024, data_tidy_updated, .id = "source") %>%
+  mutate(source = if_else(source == "1", "2024", "2026"))
+
+# check for overlapping ID codes
+overlapping_ids <- intersect(data_tidy_updated$code, data_2024$code)
+
+# view overlapping data
+overlap <- data_tidy_2026 %>%
+  filter(code %in% overlapping_ids)
+
+# discard duplicates originating from 2026 data set
+data_tidy_2026 <- data_tidy_2026 %>%
+  filter(!(source == "2026" & code %in% overlapping_ids))
+
+# recheck for duplicates -> no rows removed by distinct()
+# data_tidy_2026 %>%
+#   filter(timepoint == "aufnahme") %>%
+#   distinct(code, .keep_all = TRUE)
+
+# order by code and timepoint
+data_tidy_2026 <- data_tidy_2026 %>%
+  mutate(code = factor(code, levels = str_sort(unique(code), numeric = TRUE))) %>%
+  arrange(code, timepoint)
+
+data_tidy_2026$code %>% str_sort(numeric = TRUE)
+
 #

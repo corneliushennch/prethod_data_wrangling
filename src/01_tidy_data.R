@@ -24,12 +24,12 @@
 # select the columns that contain the data source name
 data_split <- map(
   c("tk_d", "de_kiz"),
-  ~ select(raw_data_26, code, all_of(contains(.x))) #raw_data
+  ~ select(raw_data, code, import, all_of(contains(.x))) # raw_data
 ) %>%
   # replace empty strings with NA
   map(~ mutate(.x, across(where(is.character), ~ if_else(. == "", NA, .)))) %>%
   # remove rows with no data
-  map(~ filter(.x, rowSums(!is.na(select(., -code))) > 0)) %>%
+  map(~ filter(.x, rowSums(!is.na(select(., -code, -import))) > 0)) %>%
   # remove the data source name from the column names
   map(~ rename_with(.x, ~ str_remove(., "_tk_d|_de_kiz"))) %>%
   # name the two data frames
@@ -59,37 +59,42 @@ data_tidy <- data_clean %>%
       "\\1_\\2",
       .
     ),
-    -c("code", "setting")
+    -c("code", "setting", "import")
   ) %>%
   # pivot the data frame
   pivot_longer(
-    cols = -c(code, setting),
+    cols = -c(code, setting, import),
     names_to = c(".value", "timepoint"),
     names_sep = "_"
-  ) %>%
-  # remove duplicates
-  distinct(code, timepoint, .keep_all = TRUE)
+  )
+
+# check duplicates -> keep for now (probably due to multiple entries for the
+# same patient for different treatment periods, will get filtered out later when
+# filtering for complete cases
+duplicates <- data_tidy %>%
+  group_by(code, timepoint) %>%
+  filter(n() > 1)
 
 # show all columns containing only NA
 # data_tidy %>% select(where(~ all(is.na(.))))
 
-# drop all columns containing only NA
+# drop all columns containing only NA -> none removed
 data_tidy <- data_tidy %>%
   select(where(~ !all(is.na(.))))
 
 # re-attach bas021 column with only NA values (for compatibility with 2024 data)
-data_tidy <- data_tidy %>%
-  add_column(bas021 = NA_real_, .after = "bas020")
+# -> not necessary anymore, because we want to keep all cases for the analysis
+# data_tidy <- data_tidy %>%
+#   add_column(bas021 = NA_real_, .after = "bas020")
 
 # data_tidy %>% select(code, setting, timepoint, contains("bd2")) %>% view()
-
 
 # 2. filter for complete cases -------------------------------------------------
 # bdi sum admission and discharge n = 467
 
 # into wide format for counting
 wide <- data_tidy %>%
-  select(code, timepoint, bd2sum) %>%
+  select(code, timepoint, import, bd2sum) %>%
   pivot_wider(names_from = timepoint, values_from = bd2sum)
 
 # ids of patients with complete cases for admission and discharge
@@ -100,6 +105,11 @@ complete_cases <- wide %>%
 # this is not necessary anymore, because we want to keep all cases for the analysis
 # data_tidy <- data_tidy %>%
 #   filter(code %in% complete_cases)
+
+# check for completely empty rows
+no_data_rows <- data_tidy %>%
+  filter(rowSums(!is.na(select(., -code, -setting, -timepoint, -import))) == 0)
+
 
 # 3. re-label tidy variable key ------------------------------------------------
 var_key_tidy <- var_key %>%
@@ -119,6 +129,7 @@ var_key_tidy <- var_key %>%
 
 # setdiff(colnames(data_tidy), var_key_tidy$var_name)
 
+
 # 4. relabel basisdoku timepoint -----------------------------------------------
 bas_vars <- names(data_tidy) %>% str_subset("^bas")
 
@@ -131,13 +142,101 @@ data_tidy <- data_tidy %>%
   )) %>%
   ungroup()
 
+# check
+# data_tidy %>%
+#   select(code, setting, timepoint, all_of(bas_vars)) %>%
+#   filter(timepoint %in% c("aufnahme", "abschlussmessung")) # %>%  View()
+
+# 4. replace data from manually curated 2024 dataset ---------------------------
+# all columns of data_2024 are present in data_tidy
+setdiff(colnames(data_2024), colnames(data_tidy))
+
+# but not all columns of data_tidy are present in data_2024 -> mainly date,  status and version columns
+# but also bas005 and bas007 (MINI and reason of therapy end)
+col_diff <- setdiff(colnames(data_tidy), colnames(data_2024))
+
+# join missing columns (bas005 and bas007) to data_2024 from data tidy
+data_2024 <- data_2024 %>%
+  left_join(data_tidy %>% select(setting, code, timepoint, bas005, bas007),
+            by = c("setting", "code", "timepoint"))
+
+# update col_diff
+col_diff <- setdiff(colnames(data_tidy), colnames(data_2024))
+
+# drop unused columns from data_tidy
+data_tidy <- data_tidy %>%
+  select(-all_of(col_diff))
+
+# harmonize column order of data_2024 to match data_tidy
+data_2024 <- data_2024 %>%
+  select(all_of(colnames(data_tidy)))
+
+# check for matching columns -> checks out!
+if (!identical(colnames(data_2024), colnames(data_tidy))) {
+  stop("Column names of data_2024 and data_tidy are not identical")
+} else {
+  message("Column names of data_2024 and data_tidy are identical")
+}
+
+# check if all IDs in data_2024 are present in data_tidy
+if (!all(data_2024$code %in% data_tidy$code)) {
+  stop("Not all IDs in data_2024 are present in data_tidy")
+} else {
+  message("All IDs in data_2024 are present in data_tidy")
+}
+
+# drop all cases from data_tidy that are present in data_2024 -> 1404 rows removed
+data_tidy <- data_tidy %>%
+  filter(!code %in% data_2024$code)
+
+# check variable class
+col_classes_tidy <- data_tidy %>%
+  map(~ class(.x)) %>% stack() %>%
+  rename(var_name = "ind" , class = "values") %>%
+  left_join(var_key_tidy, by = "var_name")
+
+col_classes_2024 <- data_2024 %>%
+  map(~ class(.x)) %>% stack() %>%
+  rename(var_name = "ind" , class = "values") %>%
+  left_join(var_key_tidy, by = "var_name")
+
+col_classes <- col_classes_tidy %>%
+  left_join(col_classes_2024, by = "var_name", suffix = c("_tidy", "_2024")) %>%
+  mutate(class_match = class_tidy == class_2024)
+
+# need all to be converted to factor in data_2024
+class_mismatch <- col_classes %>%
+  filter(!class_match) %>%
+  select(var_name, class_tidy, class_2024)
+
+class_mismatch_factor <-
+  filter(class_mismatch, class_tidy == "factor")
+
+# convert mismatching variables in data_2024 to factor
+data_2024 <- data_2024 %>%
+  mutate(across(all_of(class_mismatch_factor$var_name), as.factor))
+
+# convert to date
+data_2024 <- data_2024 %>%
+  mutate(bd2dat = as.Date(bd2dat, format = "%d.%m.%y"))
+
+# bind data_2024 to data_tidy -> 1404 rows added
+data_tidy <- bind_rows(data_tidy, data_2024)
+
+# adjust var_key_tidy to include all variables in data_tidy
+var_key_tidy <- var_key_tidy %>%
+  filter(var_name %in% colnames(data_tidy))
+
 # relabel tidy data set
 labelled::var_label(data_tidy) <- setNames(as.list(var_key_tidy$label),
                                            var_key_tidy$var_name)
+
 # 5. update bas and ddt variables ----------------------------------------------
 setdiff(colnames(badok), colnames(data_tidy))
+
+# select variables that are in badok but not in data_tidy
 bas_ddt_vars <- badok %>%
-  select(-c(code, setting, timepoint)) %>%
+  select(-c(code, setting, timepoint, any_of(col_diff))) %>%
   colnames()
 
 num_cols <- c("ddt001", "ddt009", "ddt018", "ddt019", "ddt020", "ddt021",
@@ -190,104 +289,19 @@ col_classes <- data_tidy_updated %>%
 # reorder var_key
 var_key_tidy <- var_key_tidy[order(match(var_key_tidy$var_name, colnames(data_tidy_updated))), ]
 
-# 6. add 2026 data to 2024 data set --------------------------------------------
-# TODO: rather replace the cases in the complete dataset with the 2024 cases
-# (which have been edited manually)
-## 6.1 harmonize columns -------------------------------------------------------
-# check if all columns are equal
-# if (!identical(colnames(data_tidy_updated), colnames(data_2024))) {
-#   stop("Column names of data_tidy_updated and data_2024 are not identical")
-# }else{
-#   message("Column names of data_tidy_updated and data_2024 are identical")
-# }
-
-# identify missing columns (not present in data_2024 but present in data_tidy_updated)
-missing_cols <- setdiff(colnames(data_tidy_updated), colnames(data_2024))
-
-# setdiff(colnames(data_2024), colnames(data_tidy_updated))
-
-# remove "bas007" from missing cols
-missing_cols <- missing_cols[!missing_cols %in% "bas007"]
-
-# remove missing columns from data_tidy_updated
-data_tidy_updated <- data_tidy_updated %>%
-  select(-all_of(missing_cols))
-
-# add "bas007" to data_2024 with values from data_tidy_updated
-data_2024 <- data_2024 %>%
-  mutate(bas007 = data_tidy_updated$bas007[match(data_2024$code, data_tidy_updated$code)]) %>%
-  # move after "bas006"
-  relocate(bas007, .after = bas006)
-
-# check if all columns are equal now
-if (!identical(colnames(data_tidy_updated), colnames(data_2024))) {
-  stop("Column names of data_tidy_updated and data_2024 are not identical after
- harmonization")
-}else{
-  message("Column names of data_tidy_updated and data_2024 are identical after
- harmonization")
-}
-
-# 6.2 harmonize variable classes -----------------------------------------------
-# get all factor cols
-factor_cols <- data_tidy_updated %>%
-  select(where(is.factor)) %>%
-  colnames()
-
-# convert to factor
-data_2024 <- data_2024 %>%
-  mutate(across(all_of(factor_cols), as.factor))
-
-# convert to date
-data_2024 <- data_2024 %>%
-  mutate(bd2dat = as.Date(bd2dat, format = "%d.%m.%y"))
-
-# convert to numeric
-numeric_cols <- c("ddt015", "ddt016", "ddt017", "ddt023")
-
-data_tidy_updated <- data_tidy_updated %>%
-  mutate(across(all_of(numeric_cols), as.numeric))
-
-# 6.3 harmonize IDs ------------------------------------------------------------
-
-# bind data frames together
-data_tidy_2026 <- bind_rows(data_2024, data_tidy_updated, .id = "source") %>%
-  mutate(source = if_else(source == "1", "2024", "2026"))
-
-# check for overlapping ID codes
-overlapping_ids <- intersect(data_tidy_updated$code, data_2024$code)
-
-# view overlapping data
-overlap <- data_tidy_2026 %>%
-  filter(code %in% overlapping_ids)
-
-# discard duplicates originating from 2026 data set
-data_tidy_2026 <- data_tidy_2026 %>%
-  filter(!(source == "2026" & code %in% overlapping_ids))
-
-# recheck for duplicates -> no rows removed by distinct()
-# data_tidy_2026 %>%
-#   filter(timepoint == "aufnahme") %>%
-#   distinct(code, .keep_all = TRUE)
-
-# order by code and timepoint
-data_tidy_2026 <- data_tidy_2026 %>%
-  mutate(code = factor(code, levels = str_sort(unique(code), numeric = TRUE))) %>%
-  arrange(code, timepoint)
-
-data_tidy_2026$code %>% str_sort(numeric = TRUE)
-
 # 9. export   ------------------------------------------------------------------
 
 if (save_output) {
 # xlsx
   write.xlsx(var_key_tidy, here("output", "tables", "variable_key_bsi_old.xlsx"))
-  write.xlsx(data_tidy_2026, here("output", "tables", "data_tidy_2026_v1.xlsx"))
+  write.xlsx(data_tidy_updated, here("output", "tables", "data_tidy_2026_v2.xlsx"))
 
   # csv
   write_csv2(var_key_tidy, here("output", "tables", "variable_key_tidy.csv"))
-  write_csv2(data_tidy_2026, here("output", "tables", "data_tidy_2026_v1.csv"))
+  write_csv2(data_tidy_updated, here("output", "tables", "data_tidy_2026_v2.csv"))
 }
+
+# TODO: Maybe checks and comparisons for v1 vs. v2
 
 
 
