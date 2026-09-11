@@ -205,4 +205,12 @@ data_tidy_2026 <- data_tidy_2026 %>%
 
 data_tidy_2026$code %>% str_sort(numeric = TRUE)
 
-#
+
+# join missing columns (bas005 and bas007) to data_2024 from data tidy
+data_2024 <- data_2024 %>%
+  left_join(data_tidy_updated %>% select(setting, code, timepoint, bas005, bas007),
+            by = c("setting", "code", "timepoint"))
+
+# drop unused columns from data_tidy
+data_tidy <- data_tidy %>%
+  select(-all_of(col_diff))
