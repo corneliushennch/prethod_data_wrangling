@@ -208,8 +208,9 @@ var_key_tidy <- var_key_tidy[order(match(var_key_tidy$var_name, colnames(data_ti
 
 
 # 6. replace data from manually curated 2024 dataset ---------------------------
-# TODO: just replace ddt and bas columns to avoid variable coding mix-up!!!
-# filtered df updated cases for data_tidy -> remove cols -> replace from data_2024
+# filtered df updated cases for data_tidy
+# -> remove ddt and bas cols
+# -> replace from data_2024
 
 # all columns of data_2024 are present in data_tidy
 setdiff(colnames(data_2024), colnames(data_tidy_updated))
@@ -287,11 +288,11 @@ class_mismatch <- col_classes %>%
   filter(!class_match) %>%
   select(var_name, class_tidy, class_temp)
 
-data_tidy_temp %>%
-  select(code, all_of(class_mismatch$var_name)) %>% View()
-
-data_tidy_updated %>%
-  select(code, all_of(class_mismatch$var_name)) %>% View()
+# data_tidy_temp %>%
+#   select(code, all_of(class_mismatch$var_name)) %>% View()
+#
+# data_tidy_updated %>%
+#   select(code, all_of(class_mismatch$var_name)) %>% View()
 
 # convert to numeric -> no NAs generated
 data_tidy_updated <- data_tidy_updated %>%
@@ -320,14 +321,39 @@ differences <- anti_join(data_tidy_updated,
                          data_tidy_2026,
                          by = c("code", "setting", "timepoint"))
 
-# comparison <- left_join(data_tidy_updated, data_tidy_2026, by = c("code", "setting", "timepoint"), suffix = c("_tidy", "_2026")) %>%
-#   select(code, setting, timepoint, ends_with(c("_tidy", "_2026"))) %>%
-#   select(code, setting, timepoint, starts_with("bas"), starts_with("ddt")) %>%
-#   distinct()
+comparison <- left_join(data_tidy_updated, data_tidy_2026, by = c("code", "setting", "timepoint"), suffix = c("_tidy", "_2026")) %>%
+  select(code, setting, timepoint, ends_with(c("_tidy", "_2026"))) %>%
+  # select(code, setting, timepoint, starts_with("bas"), starts_with("ddt")) %>%
+  distinct()
+
+
+
+order_vec <- c("code", "setting", "timepoint", sort(setdiff(colnames(comparison), c("code", "setting", "timepoint"))))
+
+# order
+comparison <- comparison %>%
+  select(all_of(order_vec))
+
+# pivot longer for comparison:
+# variable names -> "var_name"
+# values -> "values_tidy" and "values_2026"
+comparison_long <- comparison %>%
+  mutate(across(-c(code, setting, timepoint), as.character)) %>%
+  pivot_longer(
+    cols = -c(code, setting, timepoint),
+    names_to = c("var_name", ".value"),
+    names_pattern = "^(.*)_(tidy|2026)$"
+  ) %>%
+  rename(values_tidy = tidy, values_2026 = `2026`) %>%
+  # diff column
+  mutate(diff = if_else(is.na(values_tidy) & is.na(values_2026), FALSE,
+                   values_tidy != values_2026))
+
 #
-# order_vec <- c("code", "setting", "timepoint", sort(setdiff(colnames(comparison), c("code", "setting", "timepoint"))))
+diff <- comparison_long %>%
+  filter(diff == TRUE) %>% View()
 
-
+# 47 cases with differences, mainly fixed typos in drug names
 ## 6.3 update variable key -----------------------------------------------------
 
 # adjust var_key_tidy to include all variables in data_tidy_2026
@@ -349,8 +375,6 @@ if (save_output) {
   write_csv2(var_key_tidy, here("output", "tables", "variable_key_tidy.csv"))
   write_csv2(data_tidy_2026, here("output", "tables", "data_tidy_2026_v3.csv"))
 }
-
-# TODO: Maybe checks and comparisons for v1 vs. v2
 
 
 
